@@ -10,6 +10,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    /* ── 1. Busca info da faixa no Spotify ── */
     const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: {
@@ -27,14 +28,27 @@ export default async function handler(req, res) {
     const track = await trackRes.json()
     if (!track.id) return res.status(404).json({ error: 'Track not found' })
 
+    const name      = track.name
+    const artist    = track.artists?.[0]?.name ?? ''
+    const albumArt  = track.album?.images?.[1]?.url ?? track.album?.images?.[0]?.url ?? null
+    let   previewUrl = track.preview_url ?? null
+
+    /* ── 2. Spotify não tem preview → tenta Deezer (grátis, sem auth) ── */
+    if (!previewUrl && name) {
+      try {
+        const q = encodeURIComponent(`${name} ${artist}`.trim())
+        const deezerRes  = await fetch(`https://api.deezer.com/search?q=${q}&limit=5`)
+        const deezerData = await deezerRes.json()
+
+        /* pega o primeiro resultado que tenha preview de 30s */
+        const hit = deezerData?.data?.find(d => d.preview)
+        if (hit?.preview) previewUrl = hit.preview
+      } catch { /* Deezer falhou — sem preview */ }
+    }
+
     res.setHeader('Cache-Control', 's-maxage=3600')
-    res.json({
-      previewUrl: track.preview_url,
-      name:       track.name,
-      artist:     track.artists?.[0]?.name ?? '',
-      albumArt:   track.album?.images?.[1]?.url ?? track.album?.images?.[0]?.url ?? null,
-    })
+    res.json({ previewUrl, name, artist, albumArt })
   } catch {
-    res.status(500).json({ error: 'Failed to fetch Spotify preview' })
+    res.status(500).json({ error: 'Failed to fetch preview' })
   }
 }

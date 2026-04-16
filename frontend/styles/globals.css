@@ -164,6 +164,18 @@ body {
   to   { opacity: 1; }
 }
 
+/* Rotação contínua (anel decorativo da foto) */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Shimmer de entrada único (passa uma vez) */
+@keyframes shimmerOnce {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+
 /* ══════════════════════════════════════════════════
    CLASSES UTILITÁRIAS
 ══════════════════════════════════════════════════ */

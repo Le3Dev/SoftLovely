@@ -595,35 +595,64 @@ function SectionRetrospectiva({ time, musicUrl }) {
   const [animKey, setAnimKey] = useState(0)
   const [barKey,  setBarKey]  = useState(0)
 
-  /* ── música: preview 10s via Spotify API ────────── */
+  /* ── música ──────────────────────────────────────── */
   const spotifyId  = extractSpotifyId(musicUrl)
-  const [previewUrl, setPreviewUrl] = useState(null)
+  const [trackInfo,   setTrackInfo]   = useState(null)   // { previewUrl, name, artist, albumArt }
+  const [audioState,  setAudioState]  = useState('idle') // idle | playing | blocked | done
+  const audioRef = useRef(null)
 
   /* busca preview URL uma vez */
   useEffect(() => {
     if (!spotifyId) return
     fetch(`/api/spotify-preview?trackId=${spotifyId}`)
       .then(r => r.json())
-      .then(d => { if (d.previewUrl) setPreviewUrl(d.previewUrl) })
+      .then(d => setTrackInfo(d))
       .catch(() => {})
   }, [spotifyId])
 
-  /*
-   * Toca quando a seção está visível E o preview já chegou.
-   * Usando state (não ref) garante que o effect roda quando
-   * qualquer um dos dois mudar — resolve o race condition.
-   */
+  /* tenta autoplay quando seção entra na tela */
   useEffect(() => {
-    if (!isVisible || !previewUrl) return
-    const audio = new Audio(previewUrl)
+    const url = trackInfo?.previewUrl
+    if (!isVisible || !url) return
+
+    const audio = new Audio(url)
     audio.volume = 0.55
-    audio.play().catch(() => {})
-    const timer = setTimeout(() => audio.pause(), 10000)
+    audioRef.current = audio
+
+    audio.play()
+      .then(() => {
+        setAudioState('playing')
+        const timer = setTimeout(() => {
+          audio.pause()
+          setAudioState('done')
+        }, 10000)
+        audio._timer = timer
+      })
+      .catch(() => {
+        /* autoplay bloqueado pelo browser — mostra botão */
+        setAudioState('blocked')
+      })
+
     return () => {
-      clearTimeout(timer)
+      clearTimeout(audio._timer)
       audio.pause()
+      audioRef.current = null
+      setAudioState('idle')
     }
-  }, [isVisible, previewUrl])
+  }, [isVisible, trackInfo])
+
+  function unlockPlay() {
+    const url = trackInfo?.previewUrl
+    if (!url) return
+    const audio = new Audio(url)
+    audio.volume = 0.55
+    audioRef.current = audio
+    audio.play().then(() => {
+      setAudioState('playing')
+      const timer = setTimeout(() => { audio.pause(); setAudioState('done') }, 10000)
+      audio._timer = timer
+    }).catch(() => {})
+  }
 
   /* ── slides ──────────────────────────────────────── */
   const totalHours   = time ? time.totalDays * 24 + time.hours   : 0
@@ -668,13 +697,26 @@ function SectionRetrospectiva({ time, musicUrl }) {
         ))}
       </div>
 
-      {/* Indicador de música tocando */}
-      {isVisible && spotifyId && (
-        <div className="absolute top-6 right-6 z-20 flex items-center gap-1.5">
-          <div className="audio-wave" style={{ height: '16px' }}>
-            {[60,100,45,80,55].map((h, i) => <span key={i} style={{ height: `${h}%` }} />)}
-          </div>
-          <p className="text-white/40 text-xs">nossa música</p>
+      {/* Indicador / botão de música */}
+      {spotifyId && trackInfo && (
+        <div className="absolute top-6 right-6 z-20">
+          {audioState === 'playing' ? (
+            <div className="flex items-center gap-1.5">
+              <div className="audio-wave" style={{ height: '16px' }}>
+                {[60,100,45,80,55].map((h, i) => <span key={i} style={{ height: `${h}%` }} />)}
+              </div>
+              <p className="text-white/40 text-xs max-w-[90px] truncate">{trackInfo.name}</p>
+            </div>
+          ) : audioState === 'blocked' ? (
+            <button onClick={unlockPlay}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/20 transition active:scale-95"
+              style={{ background: 'rgba(201,24,74,0.5)', backdropFilter: 'blur(8px)' }}>
+              <svg width="10" height="10" fill="white" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              <p className="text-white text-xs font-bold">Tocar música</p>
+            </button>
+          ) : audioState === 'done' ? (
+            <p className="text-white/25 text-xs">🎵 {trackInfo.name}</p>
+          ) : null}
         </div>
       )}
 
@@ -735,96 +777,190 @@ function SectionRetrospectiva({ time, musicUrl }) {
 /* ── Seção foto do casal ──────────────────────────── */
 function SectionCouplePhoto({ events, coupleName, couple }) {
   const [ref, visible] = useInView(0.25)
+  const [pulse, setPulse] = useState(false)
 
-  /* foto principal: primeiro evento com imageUrl */
   const resolveUrl = url => {
     if (!url) return null
     if (url.startsWith('http')) return url
     return `${API_BASE}${url}`
   }
-  const photo = events.map(e => resolveUrl(e.imageUrl)).find(Boolean) || null
 
-  /* fotos extras para mini-galeria */
   const allPhotos = events.map(e => resolveUrl(e.imageUrl)).filter(Boolean)
   const [current, setCurrent] = useState(0)
 
+  /* troca automática entre fotos */
   useEffect(() => {
     if (allPhotos.length <= 1) return
     const id = setInterval(() => setCurrent(c => (c + 1) % allPhotos.length), 5000)
     return () => clearInterval(id)
   }, [allPhotos.length])
 
-  const activePhoto = allPhotos[current] || photo
+  /* ativa pulsação suave 1.2s após a foto aparecer */
+  useEffect(() => {
+    if (!visible) return
+    const t = setTimeout(() => setPulse(true), 1200)
+    return () => clearTimeout(t)
+  }, [visible])
+
+  const activePhoto = allPhotos[current] || null
+
+  /* corações que sobem da foto */
+  const floatingHearts = [
+    { emoji: '❤️',  left: '20%', delay: '0s',    dur: '3.2s', size: '12px' },
+    { emoji: '💕',  left: '50%', delay: '0.7s',  dur: '2.8s', size: '10px' },
+    { emoji: '🌸',  left: '75%', delay: '1.4s',  dur: '3.5s', size: '11px' },
+    { emoji: '✨',  left: '35%', delay: '2.1s',  dur: '3s',   size: '9px'  },
+    { emoji: '💖',  left: '62%', delay: '0.4s',  dur: '4s',   size: '13px' },
+    { emoji: '🌹',  left: '85%', delay: '1.8s',  dur: '3.3s', size: '10px' },
+    { emoji: '💗',  left: '10%', delay: '2.6s',  dur: '2.9s', size: '11px' },
+  ]
 
   return (
     <div ref={ref} className="snap-section px-6"
       style={{ background: 'linear-gradient(160deg,#0D0208 0%,#1a0010 50%,#2d0019 100%)' }}>
 
-      {/* Partículas flutuantes */}
+      {/* Partículas de fundo */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {['❤️','🌸','✨','💗','🌹'].map((e, i) => (
+        {floatingHearts.map((h, i) => (
           <span key={i} className="local-particle"
-            style={{ left: `${8 + i * 20}%`, bottom: 0, fontSize: `${8 + (i % 3) * 5}px`, animationDuration: `${5 + i * 0.9}s`, animationDelay: `${i * 0.8}s` }}>
-            {e}
+            style={{ left: h.left, bottom: 0, fontSize: h.size, animationDuration: h.dur, animationDelay: h.delay }}>
+            {h.emoji}
           </span>
         ))}
       </div>
 
-      <div className="relative z-10 flex flex-col items-center gap-5 w-full max-w-xs mx-auto">
+      {/* Brilho de fundo difuso */}
+      <div className="absolute inset-0 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 55%, rgba(201,24,74,0.12), transparent)' }} />
 
-        {/* Label */}
-        <p className={`text-white/35 text-xs font-bold uppercase tracking-widest transition-all duration-700 ${visible ? 'opacity-100' : 'opacity-0'}`}>
-          nossa foto ❤️
-        </p>
+      <div className="relative z-10 flex flex-col items-center gap-4 w-full max-w-xs mx-auto">
 
-        {/* Foto com animação polaroid */}
-        <div
-          className={`relative transition-none`}
-          style={{
-            width: 'min(78vw, 300px)',
-            aspectRatio: '4/5',
-            opacity: visible ? 1 : 0,
-            animation: visible ? 'photoReveal 1.1s cubic-bezier(0.34,1.56,0.64,1) both 0.1s' : 'none',
-          }}
-        >
-          {/* Borda brilhante */}
-          <div className="absolute inset-0 rounded-3xl pointer-events-none"
-            style={{ background: 'linear-gradient(135deg,rgba(255,77,122,0.5),rgba(201,24,74,0.2))', padding: '2px', borderRadius: '24px' }}>
-            <div className="w-full h-full rounded-3xl" style={{ background: '#0D0208' }} />
-          </div>
+        {/* Label animado */}
+        <div className={`flex items-center gap-2 transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
+          <div className="h-px w-8" style={{ background: 'linear-gradient(to right,transparent,rgba(201,24,74,0.6))' }} />
+          <p className="text-white/40 text-xs font-bold uppercase tracking-widest">nossa foto</p>
+          <div className="h-px w-8" style={{ background: 'linear-gradient(to left,transparent,rgba(201,24,74,0.6))' }} />
+        </div>
 
-          {/* Glow externo */}
-          <div className="absolute inset-0 rounded-3xl pointer-events-none"
-            style={{ boxShadow: '0 0 40px rgba(201,24,74,0.45), 0 20px 60px rgba(0,0,0,0.6)' }} />
+        {/* Container da foto */}
+        <div style={{ position: 'relative', width: 'min(74vw, 280px)', aspectRatio: '4/5' }}>
 
-          {/* Imagem */}
-          {activePhoto ? (
-            <img
-              key={activePhoto}
-              src={activePhoto}
-              alt={coupleName}
-              className="absolute inset-0 w-full h-full rounded-3xl object-cover"
-              style={{ border: '2px solid rgba(201,24,74,0.35)' }}
-              onError={e => { e.currentTarget.style.display = 'none' }}
-            />
-          ) : (
-            <div className="absolute inset-0 rounded-3xl flex flex-col items-center justify-center gap-3"
-              style={{ background: 'linear-gradient(160deg,#1a0010,#4A0020)', border: '2px solid rgba(201,24,74,0.3)' }}>
-              <span style={{ fontSize: '3rem' }}>📷</span>
-              <p className="text-white/30 text-xs text-center px-4">Adicione uma foto especial de vocês</p>
-            </div>
+          {/* Anel giratório (decorativo) */}
+          {visible && (
+            <div className="absolute pointer-events-none"
+              style={{
+                inset: '-8px',
+                borderRadius: '32px',
+                background: 'conic-gradient(from 0deg, rgba(201,24,74,0.6), rgba(255,77,122,0.3), transparent, rgba(201,24,74,0.6))',
+                animation: 'spin 8s linear infinite',
+                opacity: 0.5,
+              }} />
           )}
 
-          {/* Overlay gradiente na base */}
-          {activePhoto && (
-            <div className="absolute bottom-0 left-0 right-0 h-1/3 rounded-b-3xl pointer-events-none"
-              style={{ background: 'linear-gradient(to top,rgba(13,2,8,0.7),transparent)' }} />
+          {/* Card polaroid */}
+          <div
+            style={{
+              position: 'absolute', inset: 0,
+              borderRadius: '24px',
+              background: 'linear-gradient(160deg,#1a0010,#0D0208)',
+              border: '2px solid rgba(201,24,74,0.4)',
+              boxShadow: pulse
+                ? '0 0 60px rgba(201,24,74,0.5), 0 20px 60px rgba(0,0,0,0.7), inset 0 0 20px rgba(201,24,74,0.08)'
+                : '0 0 30px rgba(201,24,74,0.25), 0 20px 40px rgba(0,0,0,0.6)',
+              opacity: visible ? 1 : 0,
+              animation: visible ? 'photoReveal 1.1s cubic-bezier(0.34,1.56,0.64,1) both 0.1s' : 'none',
+              transition: 'box-shadow 1s ease',
+              overflow: 'hidden',
+            }}
+          >
+            {activePhoto ? (
+              <>
+                <img
+                  key={activePhoto}
+                  src={activePhoto}
+                  alt={coupleName}
+                  style={{
+                    position: 'absolute', inset: 0,
+                    width: '100%', height: '85%',
+                    objectFit: 'cover',
+                    animation: pulse ? 'kenBurns 12s ease-in-out infinite alternate' : 'none',
+                  }}
+                  onError={e => { e.currentTarget.style.display = 'none' }}
+                />
+                {/* Overlay gradiente base */}
+                <div style={{
+                  position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%',
+                  background: 'linear-gradient(to top,rgba(13,2,8,0.95) 0%,rgba(13,2,8,0.6) 50%,transparent 100%)',
+                }} />
+                {/* Label polaroid na base */}
+                <div style={{
+                  position: 'absolute', bottom: 0, left: 0, right: 0,
+                  padding: '12px 16px',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+                }}>
+                  <p style={{
+                    color: 'white', fontWeight: 900, fontSize: '1rem', lineHeight: 1.2,
+                    textShadow: '0 0 20px rgba(201,24,74,0.7)',
+                    animation: pulse ? 'fadeInUp 0.8s ease both' : 'none',
+                    textAlign: 'center',
+                  }}>{coupleName}</p>
+                  {couple.anniversaryDate && (
+                    <p style={{
+                      color: 'rgba(255,143,163,0.7)', fontSize: '0.65rem', fontWeight: 700,
+                      letterSpacing: '0.08em', textTransform: 'uppercase',
+                      animation: pulse ? 'fadeInUp 0.8s ease both 0.15s' : 'none',
+                    }}>
+                      {parseLocalDate(couple.anniversaryDate).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                  )}
+                </div>
+                {/* Shimmer ao aparecer */}
+                {visible && (
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%)',
+                    backgroundSize: '200% 100%',
+                    animation: 'shimmerOnce 1.2s ease 0.5s both',
+                    pointerEvents: 'none',
+                  }} />
+                )}
+              </>
+            ) : (
+              <div style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px',
+              }}>
+                <span style={{ fontSize: '3rem', animation: 'heartbeat 2s ease-in-out infinite' }}>📷</span>
+                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', textAlign: 'center', padding: '0 16px' }}>
+                  Adicione uma foto especial de vocês
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Sparkles nos cantos quando visível */}
+          {visible && activePhoto && (
+            <>
+              {[
+                { top: '-6px', left: '-6px', delay: '0.8s' },
+                { top: '-6px', right: '-6px', delay: '1.1s' },
+                { bottom: '-6px', left: '-6px', delay: '1.4s' },
+                { bottom: '-6px', right: '-6px', delay: '1.7s' },
+              ].map((pos, i) => (
+                <span key={i} style={{
+                  position: 'absolute', ...pos,
+                  fontSize: '14px', pointerEvents: 'none',
+                  animation: `softPulse 2s ease-in-out infinite`,
+                  animationDelay: pos.delay,
+                }}>✨</span>
+              ))}
+            </>
           )}
         </div>
 
-        {/* Dots se tiver várias fotos */}
+        {/* Dots navegação */}
         {allPhotos.length > 1 && (
-          <div className="flex gap-1.5 -mt-2">
+          <div className="flex gap-1.5">
             {allPhotos.map((_, i) => (
               <button key={i} onClick={() => setCurrent(i)}
                 className="rounded-full transition-all duration-300"
@@ -833,17 +969,17 @@ function SectionCouplePhoto({ events, coupleName, couple }) {
           </div>
         )}
 
-        {/* Nome + data */}
-        <div className={`text-center transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}
-          style={{ transitionDelay: '0.5s' }}>
-          <p className="font-black text-white text-xl" style={{ textShadow: '0 0 24px rgba(201,24,74,0.5)' }}>
-            {coupleName}
+        {/* Frase romântica */}
+        <div className={`text-center transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+          style={{ transitionDelay: '0.7s' }}>
+          <p className="text-white/25 text-xs italic">
+            "cada foto conta a nossa história"
           </p>
-          {couple.anniversaryDate && (
-            <p className="text-white/35 text-xs mt-1">
-              desde {parseLocalDate(couple.anniversaryDate).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
-            </p>
-          )}
+          <div className="flex items-center justify-center gap-1 mt-2">
+            {['❤️','❤️','❤️'].map((h, i) => (
+              <span key={i} style={{ fontSize: '10px', animation: `heartbeat 1.8s ease-in-out infinite`, animationDelay: `${i * 0.25}s` }}>{h}</span>
+            ))}
+          </div>
         </div>
       </div>
 
