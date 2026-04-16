@@ -31,11 +31,11 @@ export default function CouplePublicPage() {
         setCouple(coupleRes.data)
 
         // Carregar eventos
-        const eventsRes = await axios.get(`${API_BASE}/api/events/couple/${coupleRes.data.id}`)
+        const eventsRes = await axios.get(`${API_BASE}/api/events/c/${coupleRes.data.id}`)
         setEvents(eventsRes.data.sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate)))
 
         // Carregar parceiros
-        const partnersRes = await axios.get(`${API_BASE}/api/partners/couple/${coupleRes.data.id}`)
+        const partnersRes = await axios.get(`${API_BASE}/api/partners/c/${coupleRes.data.id}`)
         setPartners(partnersRes.data)
 
         setLoading(false)

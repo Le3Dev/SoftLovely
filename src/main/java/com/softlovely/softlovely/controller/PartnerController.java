@@ -27,7 +27,7 @@ public class PartnerController {
         }
     }
 
-    @GetMapping("/couple/{coupleId}")
+    @GetMapping({"/couple/{coupleId}", "/c/{coupleId}"})
     public ResponseEntity<?> getPartnersByCoupleId(@PathVariable String coupleId) {
         try {
             List<PartnerDtos.PartnerResponse> response = partnerService.getPartnersByCoupleId(coupleId);

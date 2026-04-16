@@ -1,271 +1,185 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { loadStripe } from '@stripe/stripe-js'
 import axios from 'axios'
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY || 'pk_test_51SEtmb0yzuK30F764UIYySTfcuUF0SgHR0exihluL5PmGEgJCaR4ZDPxMe0ADYXLPm8lweLO6Cti6AWmummzYiIh00Qf7p2Nox')
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
 
+const PLANS = [
+  {
+    id: false,
+    name: 'Basico',
+    price: '14,90',
+    desc: 'Para comecar com o pe direito',
+    features: ['Pagina animada personalizada', 'Contador em tempo real', '1 foto por parceiro', 'Musica do Spotify', 'QR Code exclusivo', 'Validade de 30 dias'],
+  },
+  {
+    id: true,
+    name: 'Premium',
+    price: '19,90',
+    desc: 'Para quem quer o melhor',
+    features: ['Tudo do Basico', 'Fotos ilimitadas', 'Historia personalizada', 'Compartilhar nos Stories', 'Sem prazo de validade', 'Suporte prioritario'],
+    popular: true,
+  },
+]
+
 export default function Payment() {
   const router = useRouter()
-  const { coupleId } = router.query
-  
-  const [loading, setLoading] = useState(false)
-  const [isPremium, setIsPremium] = useState(false)
-  const [message, setMessage] = useState('')
-  const [couple, setCouple] = useState(null)
-  const [pageLoading, setPageLoading] = useState(true)
+  const { coupleId, isPremium: isPremiumQuery } = router.query
+
+  const [isPremium,    setIsPremium]    = useState(false)
+  const [couple,       setCouple]       = useState(null)
+  const [loading,      setLoading]      = useState(false)
+  const [pageLoading,  setPageLoading]  = useState(true)
+  const [message,      setMessage]      = useState('')
+
+  /* pre-seleciona plano vindo da pagina inicial */
+  useEffect(() => {
+    if (isPremiumQuery !== undefined) {
+      setIsPremium(isPremiumQuery === 'true')
+    }
+  }, [isPremiumQuery])
 
   useEffect(() => {
     if (!coupleId) return
-
-    const fetchCouple = async () => {
-      try {
-        const response = await axios.get(`${API_BASE}/api/couples/${coupleId}`)
-        setCouple(response.data)
-      } catch (error) {
-        setMessage('Erro ao carregar dados do casal')
-        console.error(error)
-      } finally {
-        setPageLoading(false)
-      }
-    }
-
-    fetchCouple()
+    axios.get(`${API_BASE}/api/couples/${coupleId}`)
+      .then(r => setCouple(r.data))
+      .catch(() => setMessage('Erro ao carregar dados do casal'))
+      .finally(() => setPageLoading(false))
   }, [coupleId])
 
-  const handleCheckout = async (e) => {
+  const handleCheckout = async e => {
     e.preventDefault()
-    
-    if (!coupleId) {
-      setMessage('ID do casal não encontrado. Volte e tente novamente.')
-      return
-    }
-
+    if (!coupleId) { setMessage('ID do casal nao encontrado.'); return }
     setLoading(true)
     setMessage('')
-
     try {
-      // Chamada ao backend para criar sessão de checkout
-      const response = await axios.post(`${API_BASE}/api/payments/checkout`, {
-        coupleId,
-        isPremium
-      })
-
-      if (response.data.checkoutUrl) {
-        // Redirecionar para Stripe Checkout
-        window.location.href = response.data.checkoutUrl
-      } else {
-        setMessage('Erro ao criar sessão de pagamento')
-      }
-    } catch (error) {
-      setMessage('Erro: ' + (error.response?.data?.message || error.message))
+      const { data } = await axios.post(`${API_BASE}/api/payments/checkout`, { coupleId, isPremium })
+      if (data.checkoutUrl) window.location.href = data.checkoutUrl
+      else setMessage('Erro ao criar sessao de pagamento')
+    } catch (err) {
+      setMessage('Erro: ' + (err.response?.data?.message || err.message))
     } finally {
       setLoading(false)
     }
   }
 
-  if (pageLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando informações...</p>
-        </div>
+  if (pageLoading) return (
+    <div className="min-h-screen flex items-center justify-center font-sans"
+      style={{ background: 'linear-gradient(150deg, #0D0208, #4A0020)' }}>
+      <div className="text-center">
+        <div className="text-5xl animate-heartbeat mb-4">❤️</div>
+        <p className="text-white/50 text-sm uppercase tracking-widest">Carregando...</p>
       </div>
-    )
-  }
+    </div>
+  )
+
+  const selected = PLANS.find(p => p.id === isPremium)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50">
-      <div className="max-w-6xl mx-auto px-4 py-12">
+    <div className="min-h-screen font-sans py-16 px-4"
+      style={{ background: 'linear-gradient(150deg, #0D0208 0%, #1a0010 50%, #2d0019 100%)' }}>
+
+      <div className="max-w-2xl mx-auto">
+
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-pink-600 mb-4">
-            ✨ StoryOfUs Premium ✨
-          </h1>
-          <p className="text-xl text-gray-600">
-            {couple ? `Parabéns ${couple.slug}! 🎉` : ''} Finalize seu pagamento para criar seu QR Code exclusivo
-          </p>
+          <span className="text-love-500 font-bold text-sm uppercase tracking-widest">Finalize sua pagina</span>
+          <h1 className="font-black text-white text-4xl mt-2 mb-1">Escolha seu plano</h1>
+          {couple && (
+            <p className="text-white/40 text-sm">para <span className="text-love-300 font-bold">{couple.slug}</span></p>
+          )}
         </div>
 
-        {/* Pricing Cards */}
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
-          {/* Basic Plan */}
-          <div className={`bg-white rounded-xl shadow-lg p-8 border-2 transition cursor-pointer ${
-            !isPremium ? 'border-pink-500 bg-pink-50' : 'border-gray-200 hover:border-pink-200'
-          }`}
-          onClick={() => setIsPremium(false)}>
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Plan Básico</h2>
-            <div className="text-4xl font-bold text-pink-600 mb-2">
-              $9,99 <span className="text-lg text-gray-600">/único</span>
-            </div>
-            <p className="text-gray-600 mb-6">Perfeito para começar</p>
-            
-            <ul className="space-y-3 mb-8">
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>QR Code exclusivo</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>Timeline com eventos</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>Galeria de fotos</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>Histórias básicas</span>
-              </li>
-            </ul>
-
-            <button
-              onClick={() => setIsPremium(false)}
-              className={`w-full py-3 rounded-lg font-semibold transition ${
-                !isPremium
-                  ? 'bg-pink-600 text-white hover:bg-pink-700'
-                  : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+        {/* Cards de plano */}
+        <div className="grid md:grid-cols-2 gap-5 mb-8">
+          {PLANS.map(plan => (
+            <button key={String(plan.id)} type="button"
+              onClick={() => setIsPremium(plan.id)}
+              className={`relative text-left rounded-3xl p-7 border-2 transition-all duration-300 ${
+                isPremium === plan.id
+                  ? 'border-love-400 scale-[1.02] shadow-2xl'
+                  : 'border-white/10 hover:border-white/25'
               }`}
-            >
-              {!isPremium ? '✓ Selecionado' : 'Escolher Plan'}
-            </button>
-          </div>
+              style={{
+                background: isPremium === plan.id
+                  ? 'linear-gradient(150deg, #4A0020, #C9184A)'
+                  : 'rgba(255,255,255,0.05)',
+              }}>
 
-          {/* Premium Plan */}
-          <div className={`bg-white rounded-xl shadow-xl p-8 border-2 transition cursor-pointer transform ${
-            isPremium ? 'border-rose-500 bg-rose-50 scale-105' : 'border-gray-200 hover:border-rose-200'
-          }`}
-          onClick={() => setIsPremium(true)}>
-            {isPremium && (
-              <div className="absolute top-4 right-4 bg-yellow-400 text-gray-800 px-3 py-1 rounded-full text-sm font-bold">
-                POPULAR
+              {plan.popular && (
+                <span className="absolute top-4 right-4 bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full border border-white/20">
+                  Popular ❤️
+                </span>
+              )}
+
+              <p className="text-white/50 text-xs font-bold uppercase tracking-widest mb-1">{plan.name}</p>
+              <div className="flex items-end gap-1 mb-1">
+                <span className="text-white font-black text-4xl">R${plan.price.split(',')[0]}</span>
+                <span className="text-white font-black text-xl mb-0.5">,{plan.price.split(',')[1]}</span>
               </div>
-            )}
-            
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Plan Premium</h2>
-            <div className="text-4xl font-bold text-rose-600 mb-2">
-              $29,99 <span className="text-lg text-gray-600">/único</span>
-            </div>
-            <p className="text-gray-600 mb-6">Tudo para casais que querem mais</p>
-            
-            <ul className="space-y-3 mb-8">
-              <li className="flex items-center gap-2">
-                <span className="text-rose-500">✓</span>
-                <span>Tudo do plano básico</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-rose-500">✓</span>
-                <span>Histórias com IA avançada</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-rose-500">✓</span>
-                <span>Temas customizados</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-rose-500">✓</span>
-                <span>Exportar como PDF</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-rose-500">✓</span>
-                <span>Suporte prioritário</span>
-              </li>
-            </ul>
+              <p className="text-white/40 text-xs mb-5">pagamento unico</p>
 
-            <button
-              onClick={() => setIsPremium(true)}
-              className={`w-full py-3 rounded-lg font-semibold transition ${
-                isPremium
-                  ? 'bg-rose-600 text-white hover:bg-rose-700'
-                  : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-              }`}
-            >
-              {isPremium ? '✓ Selecionado' : 'Escolher Premium'}
+              <ul className="space-y-2">
+                {plan.features.map(f => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-white/70">
+                    <span className="text-love-300 font-bold flex-shrink-0 mt-0.5">✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              {/* Indicador selecionado */}
+              <div className={`mt-5 h-1 rounded-full transition-all duration-300 ${isPremium === plan.id ? 'bg-white/40' : 'bg-white/10'}`} />
             </button>
-          </div>
+          ))}
         </div>
 
-        {/* Payment Form */}
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md mx-auto">
-          <h3 className="text-2xl font-bold text-gray-800 mb-2">
-            {isPremium ? '👑 Premium' : '💫 Básico'}
-          </h3>
-          <p className="text-gray-600 mb-6">
-            Valor: <span className="font-bold text-lg">${isPremium ? '29,99' : '9,99'} USD</span>
-          </p>
+        {/* Resumo + botao */}
+        <div className="rounded-3xl p-8"
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
 
-          <form onSubmit={handleCheckout} className="space-y-4">
-            {couple && (
-              <div className="p-4 bg-pink-50 rounded-lg border border-pink-200 mb-6">
-                <p className="text-gray-700">
-                  <span className="font-bold">Casal:</span> {couple.slug}
-                </p>
-              </div>
-            )}
-
-            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
-              <p className="text-sm text-blue-800">
-                <strong>🧪 Modo Teste:</strong> Use o cartão <code className="bg-blue-100 px-2 py-1 rounded">4242 4242 4242 4242</code>
-              </p>
-              <p className="text-blue-700 text-xs mt-2">Data: 12/25 | CVC: 123</p>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <p className="text-white/40 text-xs uppercase tracking-widest">Plano selecionado</p>
+              <p className="text-white font-black text-xl mt-0.5">{selected.name}</p>
             </div>
+            <div className="text-right">
+              <p className="text-white/40 text-xs uppercase tracking-widest">Total</p>
+              <p className="text-love-300 font-black text-2xl mt-0.5">R${selected.price}</p>
+            </div>
+          </div>
 
-            {message && (
-              <div className={`p-4 rounded-lg text-sm ${
-                message.includes('Erro') 
-                  ? 'bg-red-50 text-red-700 border border-red-200'
-                  : 'bg-green-50 text-green-700 border border-green-200'
-              }`}>
-                {message}
-              </div>
-            )}
+          {/* Modo teste */}
+          <div className="mb-5 p-4 rounded-2xl text-xs"
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <p className="text-white/50 font-bold mb-1">🧪 Modo teste</p>
+            <p className="text-white/30">Cartao: <code className="text-white/60">4242 4242 4242 4242</code> · Data: 12/26 · CVC: 123</p>
+          </div>
 
-            <button
-              type="submit"
-              disabled={loading || !coupleId}
-              className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white py-3 rounded-lg font-bold hover:from-pink-600 hover:to-rose-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? '⏳ Processando...' : `💳 Ir para Pagamento - $${isPremium ? '29,99' : '9,99'}`}
+          {message && (
+            <div className="mb-4 p-3 rounded-xl text-sm text-red-300 bg-red-900/20 border border-red-800/30">
+              {message}
+            </div>
+          )}
+
+          <form onSubmit={handleCheckout}>
+            <button type="submit" disabled={loading || !coupleId}
+              className="w-full py-4 rounded-2xl font-black text-lg text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl hover:-translate-y-0.5"
+              style={{ background: 'linear-gradient(135deg, #C9184A, #FF4D7A)', boxShadow: '0 8px 30px rgba(201,24,74,0.4)' }}>
+              {loading ? '⏳ Redirecionando...' : `💳 Pagar R$${selected.price}`}
             </button>
           </form>
 
-          <p className="text-xs text-gray-500 text-center mt-4">
-            🔒 Seu pagamento é seguro e processado por Stripe
+          <p className="text-center text-white/20 text-xs mt-4">
+            Pagamento 100% seguro processado pelo Stripe 🔒
           </p>
         </div>
 
-        {/* Benefits Section */}
-        <div className="mt-16 grid md:grid-cols-3 gap-8">
-          <div className="text-center p-6 bg-white rounded-xl shadow-lg">
-            <div className="text-5xl mb-4">📸</div>
-            <h4 className="font-bold text-lg text-gray-800 mb-2">Galeria Ilimitada</h4>
-            <p className="text-gray-600">Armazene todas as suas memórias em um único lugar</p>
-          </div>
-          <div className="text-center p-6 bg-white rounded-xl shadow-lg">
-            <div className="text-5xl mb-4">🤖</div>
-            <h4 className="font-bold text-lg text-gray-800 mb-2">Histórias com IA</h4>
-            <p className="text-gray-600">Gere histórias lindas com inteligência artificial</p>
-          </div>
-          <div className="text-center p-6 bg-white rounded-xl shadow-lg">
-            <div className="text-5xl mb-4">📱</div>
-            <h4 className="font-bold text-lg text-gray-800 mb-2">QR Code Exclusivo</h4>
-            <p className="text-gray-600">Compartilhe facilmente com amigos e familiares</p>
-          </div>
-        </div>
-
-        {/* Footer Links */}
-        <div className="mt-12 text-center">
-          <button
-            onClick={() => router.push('/')}
-            className="text-pink-600 hover:text-pink-700 font-semibold"
-          >
-            ← Voltar ao Início
-          </button>
-        </div>
+        <button onClick={() => router.push('/')}
+          className="block mx-auto mt-6 text-white/30 hover:text-white/60 text-sm font-semibold transition">
+          ← Voltar ao inicio
+        </button>
       </div>
     </div>
   )
 }
-

@@ -35,7 +35,7 @@ public class EventController {
         }
     }
 
-    @GetMapping("/couple/{coupleId}")
+    @GetMapping({"/couple/{coupleId}", "/c/{coupleId}"})
     public ResponseEntity<?> getEventsByCoupleId(@PathVariable String coupleId) {
         try {
             List<EventDtos.EventResponse> response = eventService.getEventsByCoupleId(coupleId);

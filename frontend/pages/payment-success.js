@@ -7,170 +7,118 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
 export default function PaymentSuccess() {
   const router = useRouter()
   const { coupleId } = router.query
-  const [paymentData, setPaymentData] = useState(null)
+  const [data,    setData]    = useState(null)
   const [loading, setLoading] = useState(true)
+  const [count,   setCount]   = useState(5)   // contador de redirecionamento
 
   useEffect(() => {
     if (!coupleId) return
-
-    const fetchPaymentData = async () => {
-      try {
-        const response = await axios.get(`${API_BASE}/api/payments/success/${coupleId}`)
-        setPaymentData(response.data)
-      } catch (error) {
-        console.error('Erro ao buscar dados de pagamento:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchPaymentData()
+    axios.get(`${API_BASE}/api/payments/success/${coupleId}`)
+      .then(r => setData(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false))
   }, [coupleId])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Processando pagamento...</p>
-        </div>
-      </div>
-    )
-  }
+  /* Redireciona automaticamente para a pagina do casal apos 5s */
+  useEffect(() => {
+    if (!data?.coupleHash) return
+    if (count <= 0) {
+      router.push(`/c/${data.coupleHash}`)
+      return
+    }
+    const id = setTimeout(() => setCount(c => c - 1), 1000)
+    return () => clearTimeout(id)
+  }, [data, count, router])
 
-  if (!paymentData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-50 flex items-center justify-center px-4">
-        <div className="bg-white rounded-xl shadow-2xl p-12 max-w-md text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Erro ao Processar</h1>
-          <p className="text-gray-600 mb-6">Não conseguimos recuperar os dados de seu pagamento.</p>
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="w-full bg-pink-600 text-white py-3 rounded-lg font-bold hover:bg-pink-700 transition"
-          >
-            Voltar ao Dashboard
-          </button>
-        </div>
+  const coupleUrl = data?.coupleHash ? `/c/${data.coupleHash}` : null
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center font-sans"
+      style={{ background: 'linear-gradient(150deg, #0D0208, #4A0020)' }}>
+      <div className="text-center">
+        <div className="text-5xl animate-heartbeat mb-4">❤️</div>
+        <p className="text-white/50 text-sm uppercase tracking-widest">Confirmando pagamento...</p>
       </div>
-    )
-  }
+    </div>
+  )
+
+  if (!data) return (
+    <div className="min-h-screen flex items-center justify-center px-4 font-sans"
+      style={{ background: 'linear-gradient(150deg, #0D0208, #4A0020)' }}>
+      <div className="text-center">
+        <div className="text-5xl mb-4">💔</div>
+        <h1 className="text-xl font-black text-white mb-2">Erro ao confirmar pagamento</h1>
+        <p className="text-white/40 text-sm mb-6">Nao encontramos os dados do seu pagamento.</p>
+        <button onClick={() => router.push('/')}
+          className="px-6 py-3 bg-white text-love-700 rounded-xl font-bold">
+          Voltar ao inicio
+        </button>
+      </div>
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50">
-      <div className="max-w-2xl mx-auto px-4 py-12">
-        {/* Success Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-6">
-            <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h1 className="text-5xl font-bold text-green-600 mb-2">Sucesso! 🎉</h1>
-          <p className="text-xl text-gray-600">Seu pagamento foi processado com sucesso!</p>
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 font-sans"
+      style={{ background: 'linear-gradient(150deg, #4A0020 0%, #7B0033 50%, #C9184A 100%)' }}>
+
+      {/* Particulas */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        {['❤️','✨','🌹','💖','🎉'].map((e, i) => (
+          <span key={i} className="heart-particle"
+            style={{ left: `${10 + i * 18}%`, fontSize: '18px', animationDuration: `${6 + i}s`, animationDelay: `${i * 0.8}s` }}>
+            {e}
+          </span>
+        ))}
+      </div>
+
+      <div className="relative z-10 max-w-md w-full text-center space-y-6">
+
+        {/* Icone de sucesso */}
+        <div className="w-24 h-24 rounded-full bg-white/10 border-2 border-white/30 flex items-center justify-center mx-auto text-5xl animate-heartbeat">
+          ❤️
         </div>
 
-        {/* Main Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
-          {/* Status Section */}
-          <div className="mb-8 p-6 bg-green-50 rounded-xl border-l-4 border-green-500">
-            <p className="text-gray-700 mb-3">
-              <span className="font-bold text-gray-900">Status do Pagamento:</span>
-              <span className="ml-2 inline-block px-4 py-1 bg-green-500 text-white rounded-full text-sm font-bold">
-                PAGO ✓
-              </span>
-            </p>
-            <p className="text-gray-700">
-              <span className="font-bold text-gray-900">Plano:</span>
-              <span className="ml-2 text-pink-600 font-bold">{paymentData.isPremium ? 'Premium 👑' : 'Básico'}</span>
-            </p>
-          </div>
+        <div>
+          <h1 className="font-black text-white text-4xl mb-2">Pagamento confirmado!</h1>
+          <p className="text-white/60 text-sm">
+            Plano <span className="text-white font-bold">{data.isPremium ? 'Premium' : 'Basico'}</span> ativado com sucesso
+          </p>
+        </div>
 
-          {/* QR Code Section */}
-          {paymentData.qrCodeData && (
-            <div className="mb-8 flex flex-col items-center p-6 bg-gray-50 rounded-xl">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Seu Código QR 📱</h2>
-              <div className="bg-white p-4 rounded-lg mb-4">
-                <img 
-                  src={paymentData.qrCodeData} 
-                  alt="QR Code para página do casal"
-                  className="w-64 h-64"
-                />
-              </div>
-              <p className="text-center text-gray-600 text-sm">
-                Compartilhe este QR Code com seus convidados!<br/>
-                Ao escanear, eles poderão acessar sua página personalizada.
-              </p>
+        {/* Contador de redirecionamento */}
+        {coupleUrl && (
+          <div className="rounded-2xl p-5 text-center"
+            style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}>
+            <p className="text-white/60 text-xs uppercase tracking-widest mb-1">Redirecionando em</p>
+            <p className="font-black text-white text-5xl">{count}</p>
+            <p className="text-white/40 text-xs mt-1">segundos para sua pagina</p>
+          </div>
+        )}
+
+        {/* QR Code */}
+        {data.qrCodeData && (
+          <div className="flex flex-col items-center">
+            <p className="text-white/50 text-xs uppercase tracking-widest mb-3">Seu QR Code exclusivo</p>
+            <div className="p-3 bg-white rounded-2xl shadow-2xl">
+              <img src={data.qrCodeData} alt="QR Code" className="w-40 h-40" />
             </div>
-          )}
-
-          {/* URL Section */}
-          {paymentData.pageUrl && (
-            <div className="mb-8 p-6 bg-blue-50 rounded-xl border-l-4 border-blue-500">
-              <p className="text-gray-700 mb-3">
-                <span className="font-bold text-gray-900">Seu Link:</span>
-              </p>
-              <div className="flex items-center gap-2 mb-3">
-                <input 
-                  type="text" 
-                  value={paymentData.pageUrl}
-                  readOnly
-                  className="flex-1 px-4 py-2 border border-blue-300 rounded-lg bg-white text-gray-700 text-sm"
-                />
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(paymentData.pageUrl)
-                    alert('Link copiado!')
-                  }}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-bold"
-                >
-                  Copiar
-                </button>
-              </div>
-              <a 
-                href={paymentData.pageUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-bold"
-              >
-                Visualizar Página 🔗
-              </a>
-            </div>
-          )}
-
-          {/* Next Steps */}
-          <div className="mb-8 p-6 bg-amber-50 rounded-xl">
-            <h3 className="font-bold text-gray-900 mb-3">Próximos Passos:</h3>
-            <ul className="space-y-2 text-gray-700 text-sm">
-              <li>✓ Seu casal foi criado com sucesso</li>
-              <li>✓ Compartilhe o QR Code ou o link com seus convidados</li>
-              <li>✓ Adicione fotos, histórias e eventos à sua página</li>
-              <li>✓ Customize o tema e estilo de sua página</li>
-            </ul>
+            <p className="text-white/30 text-xs mt-2">Guarde este QR Code</p>
           </div>
+        )}
 
-          {/* Action Buttons */}
-          <div className="space-y-3">
-            <button
-              onClick={() => router.push(`/${paymentData.coupleHash || coupleId}`)}
-              className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white py-3 rounded-lg font-bold hover:from-pink-600 hover:to-rose-600 transition"
-            >
-              Ir para Minha Página ❤️
-            </button>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="w-full bg-gray-200 text-gray-800 py-3 rounded-lg font-bold hover:bg-gray-300 transition"
-            >
-              Ir para Dashboard
-            </button>
-          </div>
-        </div>
+        {/* Botao direto */}
+        {coupleUrl && (
+          <button
+            onClick={() => router.push(coupleUrl)}
+            className="w-full py-4 rounded-2xl font-black text-love-700 text-lg bg-white shadow-2xl hover:bg-love-50 transition hover:-translate-y-0.5">
+            Ver minha pagina agora ❤️
+          </button>
+        )}
 
-        {/* Footer */}
-        <div className="text-center text-gray-500 text-sm">
-          <p>Um comprovante de pagamento foi enviado para seu email</p>
-        </div>
+        <p className="text-white/20 text-xs">
+          Comprovante enviado para seu email · Pagamento processado pelo Stripe
+        </p>
       </div>
     </div>
   )
 }
-

@@ -55,8 +55,8 @@ export default function Playground() {
   const loadCoupleData = async (coupleId) => {
     try {
       const [eventsRes, partnersRes] = await Promise.all([
-        axios.get(`${API_BASE}/api/events/couple/${coupleId}`),
-        axios.get(`${API_BASE}/api/partners/couple/${coupleId}`)
+        axios.get(`${API_BASE}/api/events/c/${coupleId}`),
+        axios.get(`${API_BASE}/api/partners/c/${coupleId}`)
       ])
       setEvents(eventsRes.data || [])
       setPartners(partnersRes.data || [])

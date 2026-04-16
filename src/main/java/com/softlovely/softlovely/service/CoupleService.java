@@ -24,38 +24,39 @@ public class CoupleService {
         couple.setSlug(req.slug);
         couple.setAnniversaryDate(req.anniversaryDate);
         couple.setThemeColor(req.themeColor != null ? req.themeColor : "pink");
+        couple.setMusicUrl(req.musicUrl);
         couple.setPremium(false);
         couple = coupleRepository.save(couple);
 
         return new CoupleDtos.CoupleResponse(couple.getId(), couple.getSlug(), couple.getAnniversaryDate(),
-                couple.getThemeColor(), couple.isPremium(), couple.getOwnerId());
+                couple.getThemeColor(), couple.getMusicUrl(), couple.isPremium(), couple.getOwnerId());
     }
 
     public CoupleDtos.CoupleResponse getCoupleBySlug(String slug) throws Exception {
         Couple couple = coupleRepository.findBySlug(slug)
                 .orElseThrow(() -> new Exception("Casal não encontrado"));
         return new CoupleDtos.CoupleResponse(couple.getId(), couple.getSlug(), couple.getAnniversaryDate(),
-                couple.getThemeColor(), couple.isPremium(), couple.getOwnerId());
+                couple.getThemeColor(), couple.getMusicUrl(), couple.isPremium(), couple.getOwnerId());
     }
 
     public CoupleDtos.CoupleResponse getCoupleById(String id) throws Exception {
         Couple couple = coupleRepository.findById(id)
                 .orElseThrow(() -> new Exception("Casal não encontrado"));
         return new CoupleDtos.CoupleResponse(couple.getId(), couple.getSlug(), couple.getAnniversaryDate(),
-                couple.getThemeColor(), couple.isPremium(), couple.getOwnerId());
+                couple.getThemeColor(), couple.getMusicUrl(), couple.isPremium(), couple.getOwnerId());
     }
 
     public CoupleDtos.CoupleResponse getCoupleByHash(String hash) throws Exception {
         Couple couple = coupleRepository.findByUniqueHash(hash)
                 .orElseThrow(() -> new Exception("Casal não encontrado"));
         return new CoupleDtos.CoupleResponse(couple.getId(), couple.getSlug(), couple.getAnniversaryDate(),
-                couple.getThemeColor(), couple.isPremium(), couple.getOwnerId());
+                couple.getThemeColor(), couple.getMusicUrl(), couple.isPremium(), couple.getOwnerId());
     }
 
     public List<CoupleDtos.CoupleResponse> getCouplesByOwnerId(String ownerId) {
         return coupleRepository.findByOwnerId(ownerId).stream()
                 .map(c -> new CoupleDtos.CoupleResponse(c.getId(), c.getSlug(), c.getAnniversaryDate(),
-                        c.getThemeColor(), c.isPremium(), c.getOwnerId()))
+                        c.getThemeColor(), c.getMusicUrl(), c.isPremium(), c.getOwnerId()))
                 .collect(Collectors.toList());
     }
 
@@ -69,10 +70,13 @@ public class CoupleService {
         if (req.themeColor != null) {
             couple.setThemeColor(req.themeColor);
         }
+        if (req.musicUrl != null) {
+            couple.setMusicUrl(req.musicUrl);
+        }
         couple = coupleRepository.save(couple);
 
         return new CoupleDtos.CoupleResponse(couple.getId(), couple.getSlug(), couple.getAnniversaryDate(),
-                couple.getThemeColor(), couple.isPremium(), couple.getOwnerId());
+                couple.getThemeColor(), couple.getMusicUrl(), couple.isPremium(), couple.getOwnerId());
     }
 
     public String generateQRCodeForCouple(String coupleId) throws Exception {

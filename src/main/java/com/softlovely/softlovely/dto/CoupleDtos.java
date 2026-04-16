@@ -9,11 +9,12 @@ public class CoupleDtos {
     public static class CreateRequest {
         @NotBlank(message = "Slug é obrigatório")
         public String slug;
-        
+
         @NotNull(message = "Data de aniversário é obrigatória")
         public LocalDate anniversaryDate;
-        
+
         public String themeColor;
+        public String musicUrl;
 
         public CreateRequest() {}
     }
@@ -21,6 +22,7 @@ public class CoupleDtos {
     public static class UpdateRequest {
         public LocalDate anniversaryDate;
         public String themeColor;
+        public String musicUrl;
 
         public UpdateRequest() {}
     }
@@ -31,15 +33,17 @@ public class CoupleDtos {
         public String uniqueHash;
         public LocalDate anniversaryDate;
         public String themeColor;
+        public String musicUrl;
         public boolean isPremium;
         public String ownerId;
 
         public CoupleResponse() {}
-        public CoupleResponse(String id, String slug, LocalDate anniversaryDate, String themeColor, boolean isPremium, String ownerId) {
+        public CoupleResponse(String id, String slug, LocalDate anniversaryDate, String themeColor, String musicUrl, boolean isPremium, String ownerId) {
             this.id = id;
             this.slug = slug;
             this.anniversaryDate = anniversaryDate;
             this.themeColor = themeColor;
+            this.musicUrl = musicUrl;
             this.isPremium = isPremium;
             this.ownerId = ownerId;
         }

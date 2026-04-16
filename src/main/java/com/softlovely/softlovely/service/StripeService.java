@@ -38,7 +38,7 @@ public class StripeService {
     public String createCheckoutSession(String coupleId, boolean isPremium) throws Exception {
         Stripe.apiKey = stripeSecretKey;
 
-        long price = isPremium ? 2999 : 999; // $29.99 or $9.99 in cents
+        long price = isPremium ? 1990 : 1490; // $
 
         SessionCreateParams params = SessionCreateParams.builder()
                 .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
@@ -50,7 +50,7 @@ public class StripeService {
                                 .setQuantity(1L)
                                 .setPriceData(
                                         SessionCreateParams.LineItem.PriceData.builder()
-                                                .setCurrency("usd")
+                                                .setCurrency("brl")
                                                 .setUnitAmount(price)
                                                 .setProductData(
                                                         SessionCreateParams.LineItem.PriceData.ProductData.builder()

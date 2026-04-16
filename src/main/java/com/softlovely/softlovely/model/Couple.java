@@ -30,6 +30,8 @@ public class Couple {
 
     private String themeColor;
 
+    private String musicUrl;
+
     private boolean isPremium;
 
     private OffsetDateTime createdAt;
@@ -56,6 +58,8 @@ public class Couple {
     public void setAnniversaryDate(LocalDate anniversaryDate) { this.anniversaryDate = anniversaryDate; }
     public String getThemeColor() { return themeColor; }
     public void setThemeColor(String themeColor) { this.themeColor = themeColor; }
+    public String getMusicUrl() { return musicUrl; }
+    public void setMusicUrl(String musicUrl) { this.musicUrl = musicUrl; }
     public boolean isPremium() { return isPremium; }
     public void setPremium(boolean premium) { isPremium = premium; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
