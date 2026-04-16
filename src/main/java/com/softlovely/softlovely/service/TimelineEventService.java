@@ -14,6 +14,16 @@ public class TimelineEventService {
     @Autowired
     private TimelineEventRepository eventRepository;
 
+    /* converte entidade → DTO garantindo que imageUrl seja incluído */
+    private EventDtos.EventResponse toResponse(TimelineEvent event) {
+        EventDtos.EventResponse resp = new EventDtos.EventResponse(
+                event.getId(), event.getCoupleId(), event.getEventDate(),
+                event.getTitle(), event.getDescription(), event.getCategory());
+        resp.imageUrl = event.getImageUrl();   // campo que estava sendo omitido
+        resp.aiStory  = event.getAiStory();
+        return resp;
+    }
+
     public EventDtos.EventResponse createEvent(EventDtos.CreateRequest req) throws Exception {
         TimelineEvent event = new TimelineEvent();
         event.setCoupleId(req.coupleId);
@@ -23,22 +33,18 @@ public class TimelineEventService {
         event.setCategory(req.category);
         event.setImageUrl(req.imageUrl);
         event = eventRepository.save(event);
-
-        return new EventDtos.EventResponse(event.getId(), event.getCoupleId(), event.getEventDate(),
-                event.getTitle(), event.getDescription(), event.getCategory());
+        return toResponse(event);
     }
 
     public EventDtos.EventResponse getEventById(String id) throws Exception {
         TimelineEvent event = eventRepository.findById(id)
                 .orElseThrow(() -> new Exception("Evento não encontrado"));
-        return new EventDtos.EventResponse(event.getId(), event.getCoupleId(), event.getEventDate(),
-                event.getTitle(), event.getDescription(), event.getCategory());
+        return toResponse(event);
     }
 
     public List<EventDtos.EventResponse> getEventsByCoupleId(String coupleId) {
         return eventRepository.findByCoupleIdOrderByEventDateDesc(coupleId).stream()
-                .map(e -> new EventDtos.EventResponse(e.getId(), e.getCoupleId(), e.getEventDate(),
-                        e.getTitle(), e.getDescription(), e.getCategory()))
+                .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
@@ -46,15 +52,14 @@ public class TimelineEventService {
         TimelineEvent event = eventRepository.findById(id)
                 .orElseThrow(() -> new Exception("Evento não encontrado"));
 
-        if (req.eventDate != null) event.setEventDate(req.eventDate);
-        if (req.title != null) event.setTitle(req.title);
-        if (req.description != null) event.setDescription(req.description);
-        if (req.category != null) event.setCategory(req.category);
-        if (req.imageUrl != null) event.setImageUrl(req.imageUrl);
+        if (req.eventDate    != null) event.setEventDate(req.eventDate);
+        if (req.title        != null) event.setTitle(req.title);
+        if (req.description  != null) event.setDescription(req.description);
+        if (req.category     != null) event.setCategory(req.category);
+        if (req.imageUrl     != null) event.setImageUrl(req.imageUrl);
 
         event = eventRepository.save(event);
-        return new EventDtos.EventResponse(event.getId(), event.getCoupleId(), event.getEventDate(),
-                event.getTitle(), event.getDescription(), event.getCategory());
+        return toResponse(event);
     }
 
     public void deleteEvent(String id) throws Exception {
@@ -64,4 +69,3 @@ public class TimelineEventService {
         eventRepository.deleteById(id);
     }
 }
-
