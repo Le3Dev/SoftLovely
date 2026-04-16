@@ -585,7 +585,7 @@ function SectionPhotoMusic({ partners, events, musicUrl, coupleName }) {
 }
 
 /* ─── Seção Retrospectiva (estilo Spotify Wrapped) ─── */
-function SectionRetrospectiva({ time, musicUrl }) {
+function SectionRetrospectiva({ time, musicUrl, events }) {
   /* visibilidade bidirecional — para iniciar/pausar música */
   const [visRef, isVisible] = useVisibility(0.4)
   /* inView unidirecional — para animações de entrada (não resetam) */
@@ -654,18 +654,26 @@ function SectionRetrospectiva({ time, musicUrl }) {
     }).catch(() => {})
   }
 
+  /* ── foto do casal (primeiro evento com imagem) ─────── */
+  const resolveEvtUrl = url => {
+    if (!url) return null
+    if (url.startsWith('http')) return url
+    return `${API_BASE}${url}`
+  }
+  const couplePhoto = (events || []).map(e => resolveEvtUrl(e.imageUrl)).find(Boolean) || null
+
   /* ── slides ──────────────────────────────────────── */
   const totalHours   = time ? time.totalDays * 24 + time.hours   : 0
   const totalMinutes = time ? totalHours * 60 + time.minutes      : 0
   const totalSeconds = time ? totalMinutes * 60 + time.seconds    : 0
 
   const slides = [
-    { number: time?.totalDays?.toLocaleString('pt-BR') ?? '0', unit: time?.totalDays === 1 ? 'dia' : 'dias', sub: 'juntos e apaixonados', emoji: '🌹', bg: 'linear-gradient(160deg,#2d0019,#4A0020)' },
-    { number: totalHours.toLocaleString('pt-BR'),   unit: 'horas',    sub: 'ao seu lado',             emoji: '🌙', bg: 'linear-gradient(160deg,#1a0010,#4A0020)' },
-    { number: totalMinutes.toLocaleString('pt-BR'), unit: 'minutos',  sub: 'de amor sem parar',       emoji: '💕', bg: 'linear-gradient(160deg,#0D0208,#2d0019)' },
-    { number: totalSeconds.toLocaleString('pt-BR'), unit: 'segundos', sub: 'a cada batida do meu coração', emoji: '❤️', bg: 'linear-gradient(160deg,#4A0020,#C9184A)' },
+    { type: 'number', number: time?.totalDays?.toLocaleString('pt-BR') ?? '0', unit: time?.totalDays === 1 ? 'dia' : 'dias', sub: 'juntos e apaixonados', emoji: '🌹', bg: 'linear-gradient(160deg,#2d0019,#4A0020)', dur: 3800 },
+    { type: 'number', number: totalHours.toLocaleString('pt-BR'),   unit: 'horas',    sub: 'ao seu lado',             emoji: '🌙', bg: 'linear-gradient(160deg,#1a0010,#4A0020)', dur: 3800 },
+    { type: 'number', number: totalMinutes.toLocaleString('pt-BR'), unit: 'minutos',  sub: 'de amor sem parar',       emoji: '💕', bg: 'linear-gradient(160deg,#0D0208,#2d0019)', dur: 3800 },
+    { type: 'number', number: totalSeconds.toLocaleString('pt-BR'), unit: 'segundos', sub: 'a cada batida do meu coração', emoji: '❤️', bg: 'linear-gradient(160deg,#4A0020,#C9184A)', dur: 3800 },
+    { type: 'photo-music', bg: 'linear-gradient(160deg,#0D0208,#1a0010)', dur: 5000 },
   ]
-  const SLIDE_MS = 3800
 
   useEffect(() => {
     if (!enteredOnce) return
@@ -674,31 +682,52 @@ function SectionRetrospectiva({ time, musicUrl }) {
 
   useEffect(() => {
     if (!isVisible) return
+    const dur = slides[slide]?.dur ?? 3800
     const t = setTimeout(() => {
       setSlide(s => (s + 1) % slides.length)
       setAnimKey(k => k + 1); setBarKey(k => k + 1)
-    }, SLIDE_MS)
+    }, dur)
     return () => clearTimeout(t)
   }, [slide, isVisible]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const cur = slides[slide]
+  const isPhotoMusicSlide = cur.type === 'photo-music'
 
   return (
-    <div ref={visRef} className="snap-section px-6"
-      style={{ background: cur.bg, transition: 'background 0.9s ease' }}>
+    <div ref={visRef} className="snap-section"
+      style={{ background: cur.bg, transition: 'background 0.9s ease', overflow: 'hidden' }}>
 
-      {/* Partículas */}
+      {/* Foto de fundo desfocada no slide especial */}
+      {isPhotoMusicSlide && couplePhoto && (
+        <div key={`bgphoto-${animKey}`} className="absolute inset-0 pointer-events-none"
+          style={{ animation: 'fadeIn 1.2s ease both' }}>
+          <img src={couplePhoto} alt="" className="w-full h-full object-cover"
+            style={{ opacity: 0.18, filter: 'blur(12px)', transform: 'scale(1.08)' }} />
+          <div className="absolute inset-0"
+            style={{ background: 'linear-gradient(to bottom,rgba(13,2,8,0.7) 0%,rgba(74,0,32,0.85) 50%,rgba(13,2,8,0.9) 100%)' }} />
+        </div>
+      )}
+
+      {/* Partículas — notas musicais no slide especial, corações nos outros */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {['💖','✨','🌹','💋','⭐'].map((e, i) => (
-          <span key={i} className="local-particle"
-            style={{ left: `${10 + i * 18}%`, bottom: 0, fontSize: `${10 + (i % 3) * 4}px`, animationDuration: `${4 + i * 0.8}s`, animationDelay: `${i * 0.6}s` }}>
-            {e}
-          </span>
-        ))}
+        {isPhotoMusicSlide
+          ? ['♪','♫','♬','❤️','✨','♪','♫'].map((e, i) => (
+              <span key={i} className="local-particle"
+                style={{ left: `${8 + i * 13}%`, bottom: 0, fontSize: `${11 + (i % 3) * 4}px`, animationDuration: `${3.5 + i * 0.6}s`, animationDelay: `${i * 0.45}s`, color: 'rgba(255,143,163,0.85)' }}>
+                {e}
+              </span>
+            ))
+          : ['💖','✨','🌹','💋','⭐'].map((e, i) => (
+              <span key={i} className="local-particle"
+                style={{ left: `${10 + i * 18}%`, bottom: 0, fontSize: `${10 + (i % 3) * 4}px`, animationDuration: `${4 + i * 0.8}s`, animationDelay: `${i * 0.6}s` }}>
+                {e}
+              </span>
+            ))
+        }
       </div>
 
       {/* Indicador / botão de música */}
-      {spotifyId && trackInfo && (
+      {spotifyId && trackInfo && !isPhotoMusicSlide && (
         <div className="absolute top-6 right-6 z-20">
           {audioState === 'playing' ? (
             <div className="flex items-center gap-1.5">
@@ -722,52 +751,147 @@ function SectionRetrospectiva({ time, musicUrl }) {
 
       {/* Barras de progresso estilo stories */}
       <div className="absolute top-12 left-6 right-6 flex gap-1.5 z-20">
-        {slides.map((_, i) => (
+        {slides.map((s, i) => (
           <div key={i} className="flex-1 h-0.5 rounded-full overflow-hidden"
             style={{ background: 'rgba(255,255,255,0.2)' }}>
             {i < slide && <div className="h-full w-full" style={{ background: 'rgba(255,255,255,0.75)' }} />}
             {i === slide && (
               <div key={`bar-${barKey}`} className="h-full rounded-full"
-                style={{ background: 'rgba(255,255,255,0.9)', animation: `progressBar ${SLIDE_MS}ms linear both`, width: 0 }} />
+                style={{ background: 'rgba(255,255,255,0.9)', animation: `progressBar ${s.dur}ms linear both`, width: 0 }} />
             )}
           </div>
         ))}
       </div>
 
-      {/* Conteúdo central */}
-      <div className="relative z-10 flex flex-col items-center text-center gap-3 w-full max-w-xs mx-auto">
-        <p className="text-white/40 text-xs font-bold uppercase tracking-widest"
-          style={{ animation: 'fadeIn 0.5s ease both' }}>
-          Uma retrospectiva do nosso amor
-        </p>
+      {/* ── SLIDE ESPECIAL: foto + capa do álbum ── */}
+      {isPhotoMusicSlide ? (
+        <div key={`photomusic-${animKey}`} className="relative z-10 flex flex-col items-center justify-center gap-5 w-full max-w-xs mx-auto px-6 h-full">
 
-        <div key={`emoji-${animKey}`}
-          style={{ fontSize: '4rem', animation: 'riseUp 0.7s cubic-bezier(0.22,1,0.36,1) both' }}>
-          {cur.emoji}
+          <p className="text-white/35 text-xs font-bold uppercase tracking-widest"
+            style={{ animation: 'fadeInUp 0.6s ease both' }}>
+            a trilha sonora do nosso amor
+          </p>
+
+          {/* Foto do casal em coração + capa do álbum sobrepostos */}
+          <div className="relative flex items-center justify-center"
+            style={{ width: 200, height: 200 }}>
+
+            {/* Foto em coração ao fundo */}
+            {couplePhoto && (
+              <div style={{ position: 'absolute', inset: 0, animation: 'glowIn 1s ease both 0.2s' }}>
+                <HeartPhoto src={couplePhoto} size={200} />
+              </div>
+            )}
+
+            {/* Capa do álbum centralizada com glow */}
+            {trackInfo?.albumArt ? (
+              <div style={{
+                position: 'relative', zIndex: 10,
+                animation: 'numberDrop 0.8s cubic-bezier(0.34,1.56,0.64,1) both 0.4s',
+              }}>
+                {/* Anéis pulsantes em torno da capa */}
+                {[1,2,3].map(n => (
+                  <div key={n} style={{
+                    position: 'absolute',
+                    inset: -(n * 10),
+                    borderRadius: '50%',
+                    border: `1px solid rgba(201,24,74,${0.4 - n * 0.1})`,
+                    animation: `softPulse ${1.8 + n * 0.4}s ease-in-out infinite`,
+                    animationDelay: `${n * 0.2}s`,
+                  }} />
+                ))}
+                <img src={trackInfo.albumArt} alt={trackInfo.name}
+                  style={{
+                    width: 90, height: 90,
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '3px solid rgba(201,24,74,0.8)',
+                    boxShadow: '0 0 30px rgba(201,24,74,0.7), 0 0 60px rgba(201,24,74,0.35)',
+                    animation: 'spin 12s linear infinite',
+                    display: 'block',
+                  }} />
+                {/* Buraco do vinil */}
+                <div style={{
+                  position: 'absolute', top: '50%', left: '50%',
+                  transform: 'translate(-50%,-50%)',
+                  width: 12, height: 12, borderRadius: '50%',
+                  background: '#0D0208',
+                  border: '2px solid rgba(201,24,74,0.5)',
+                  zIndex: 2,
+                }} />
+              </div>
+            ) : (
+              /* sem capa: só emoji de nota */
+              <div style={{ position: 'relative', zIndex: 10, fontSize: '3rem', animation: 'heartGlow 2s ease-in-out infinite' }}>🎵</div>
+            )}
+          </div>
+
+          {/* Info da música */}
+          {trackInfo && (
+            <div className="text-center" style={{ animation: 'fadeInUp 0.7s ease both 0.6s' }}>
+              <p className="text-white font-black text-base leading-tight"
+                style={{ textShadow: '0 0 20px rgba(201,24,74,0.6)' }}>
+                {trackInfo.name}
+              </p>
+              <p className="text-white/45 text-xs mt-1">{trackInfo.artist}</p>
+              {/* Onda de áudio decorativa */}
+              <div className="flex justify-center mt-3">
+                <div className="audio-wave" style={{ height: '20px' }}>
+                  {[55,100,40,80,60,90,50].map((h, i) => (
+                    <span key={i} style={{ height: `${h}%` }} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Dots navegação */}
+          <div className="flex gap-2">
+            {slides.map((_, i) => (
+              <button key={i}
+                onClick={() => { setSlide(i); setAnimKey(k => k + 1); setBarKey(k => k + 1) }}
+                className="rounded-full transition-all duration-300"
+                style={{ width: i === slide ? '18px' : '6px', height: '6px', background: i === slide ? 'white' : 'rgba(255,255,255,0.3)' }} />
+            ))}
+          </div>
         </div>
 
-        <p key={`num-${animKey}`} className="font-black text-white tabular-nums leading-none"
-          style={{ fontSize: 'clamp(2.8rem,14vw,5.5rem)', animation: 'numberDrop 0.75s cubic-bezier(0.34,1.56,0.64,1) both', textShadow: '0 0 60px rgba(255,77,122,0.55)' }}>
-          {cur.number}
-        </p>
+      ) : (
+        /* ── SLIDES DE NÚMERO ── */
+        <div className="relative z-10 flex flex-col items-center text-center gap-3 w-full max-w-xs mx-auto px-6">
+          <p className="text-white/40 text-xs font-bold uppercase tracking-widest"
+            style={{ animation: 'fadeIn 0.5s ease both' }}>
+            Uma retrospectiva do nosso amor
+          </p>
 
-        <div key={`label-${animKey}`} style={{ animation: 'fadeInUp 0.6s ease both 0.18s' }}>
-          <p className="text-white/80 text-xl font-bold">{cur.unit}</p>
-          <p className="text-white/35 text-sm mt-0.5">{cur.sub}</p>
+          <div key={`emoji-${animKey}`}
+            style={{ fontSize: '4rem', animation: 'riseUp 0.7s cubic-bezier(0.22,1,0.36,1) both' }}>
+            {cur.emoji}
+          </div>
+
+          <p key={`num-${animKey}`} className="font-black text-white tabular-nums leading-none"
+            style={{ fontSize: 'clamp(2.8rem,14vw,5.5rem)', animation: 'numberDrop 0.75s cubic-bezier(0.34,1.56,0.64,1) both', textShadow: '0 0 60px rgba(255,77,122,0.55)' }}>
+            {cur.number}
+          </p>
+
+          <div key={`label-${animKey}`} style={{ animation: 'fadeInUp 0.6s ease both 0.18s' }}>
+            <p className="text-white/80 text-xl font-bold">{cur.unit}</p>
+            <p className="text-white/35 text-sm mt-0.5">{cur.sub}</p>
+          </div>
+
+          <div className="h-px my-1"
+            style={{ background: 'linear-gradient(to right,transparent,rgba(201,24,74,0.6),transparent)', width: '80%', animation: 'lineExpand 0.8s ease both 0.35s' }} />
+
+          <div className="flex gap-2 mt-1">
+            {slides.map((_, i) => (
+              <button key={i}
+                onClick={() => { setSlide(i); setAnimKey(k => k + 1); setBarKey(k => k + 1) }}
+                className="rounded-full transition-all duration-300"
+                style={{ width: i === slide ? '18px' : '6px', height: '6px', background: i === slide ? 'white' : 'rgba(255,255,255,0.3)' }} />
+            ))}
+          </div>
         </div>
-
-        <div className="h-px my-1"
-          style={{ background: 'linear-gradient(to right,transparent,rgba(201,24,74,0.6),transparent)', width: '80%', animation: 'lineExpand 0.8s ease both 0.35s' }} />
-
-        <div className="flex gap-2 mt-1">
-          {slides.map((_, i) => (
-            <button key={i}
-              onClick={() => { setSlide(i); setAnimKey(k => k + 1); setBarKey(k => k + 1) }}
-              className="rounded-full transition-all duration-300"
-              style={{ width: i === slide ? '18px' : '6px', height: '6px', background: i === slide ? 'white' : 'rgba(255,255,255,0.3)' }} />
-          ))}
-        </div>
-      </div>
+      )}
 
       <ScrollHint />
     </div>
@@ -1251,7 +1375,7 @@ export default function CouplePage() {
       {time && <SectionCounter time={time} />}
 
       {/* SECAO 3b: Retrospectiva + música tocando */}
-      {time && <SectionRetrospectiva time={time} musicUrl={couple.musicUrl} />}
+      {time && <SectionRetrospectiva time={time} musicUrl={couple.musicUrl} events={events} />}
 
       {/* SECAO 4: Foto do casal com animação */}
       <SectionCouplePhoto events={events} coupleName={coupleName} couple={couple} />

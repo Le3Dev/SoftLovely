@@ -36,30 +36,6 @@ const COLORS = [
   { name: 'Laranja', value: '#ea580c' },
 ]
 
-function FloatingHearts() {
-  const [hearts, setHearts] = useState([])
-  useEffect(() => {
-    setHearts(Array.from({ length: 10 }, (_, i) => ({
-      id: i,
-      left: `${Math.random() * 100}%`,
-      size: `${Math.random() * 12 + 10}px`,
-      dur:  `${Math.random() * 10 + 9}s`,
-      delay:`${Math.random() * 8}s`,
-      char: ['❤️','🌹','💋','✨','💖'][i % 5],
-    })))
-  }, [])
-  return (
-    <>
-      {hearts.map(h => (
-        <span key={h.id} className="heart-particle"
-          style={{ left: h.left, fontSize: h.size, animationDuration: h.dur, animationDelay: h.delay }}>
-          {h.char}
-        </span>
-      ))}
-    </>
-  )
-}
-
 /* ── Campo de musica com preview Spotify ───────────── */
 function SpotifyField({ value, onChange }) {
   const trackId = extractSpotifyId(value)
@@ -234,7 +210,6 @@ export default function Home() {
       {/* HERO */}
       <section className="relative overflow-hidden pt-28 pb-28 px-4"
         style={{ background: 'linear-gradient(150deg, #4A0020 0%, #7B0033 35%, #C9184A 70%, #FF4D7A 100%)' }}>
-        <FloatingHearts />
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 60%, rgba(255,77,122,0.18) 0%, transparent 70%)' }} />
 
