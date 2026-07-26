@@ -3,6 +3,7 @@ package com.softlovely.softlovely.controller;
 import com.softlovely.softlovely.dto.PaymentDtos;
 import com.softlovely.softlovely.service.StripeService;
 import com.softlovely.softlovely.service.CoupleService;
+import com.softlovely.softlovely.service.NotaFiscalService;
 import com.softlovely.softlovely.service.QRCodeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -23,10 +24,15 @@ public class PaymentController {
     @Autowired
     private QRCodeService qrCodeService;
 
+    @Autowired
+    private NotaFiscalService notaFiscalService;
+
     @PostMapping("/checkout")
     public ResponseEntity<?> createCheckout(@RequestBody PaymentDtos.CheckoutRequest req) {
         try {
-            String sessionId = stripeService.createCheckoutSession(req.coupleId, req.isPremium);
+            String sessionId = stripeService.createCheckoutSession(
+                    req.coupleId, req.isPremium,
+                    req.customerEmail, req.customerName, req.customerCpf);
             String checkoutUrl = stripeService.getCheckoutSessionUrl(sessionId);
             return ResponseEntity.ok(new PaymentDtos.CheckoutResponse(sessionId, checkoutUrl));
         } catch (Exception e) {
@@ -40,7 +46,7 @@ public class PaymentController {
             @RequestBody String payload,
             @RequestHeader(value = "Stripe-Signature", required = false) String sigHeader) {
         try {
-            stripeService.handleWebhook(payload, sigHeader);
+            stripeService.handleWebhook(payload, sigHeader, notaFiscalService);
             return ResponseEntity.ok("received");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Webhook error: " + e.getMessage());

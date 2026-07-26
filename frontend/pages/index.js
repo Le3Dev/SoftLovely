@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import axios from 'axios'
 
@@ -16,7 +16,6 @@ const FEATURES = [
   { emoji: '⏱️', title: 'Contador em tempo real',   desc: 'Anos, meses, dias, horas, minutos e segundos — atualizado a cada segundo.' },
   { emoji: '📸', title: 'Fotos de voces',            desc: 'Exiba as fotos mais especiais com design elegante e animado.' },
   { emoji: '🎵', title: 'Musica do Spotify',         desc: 'Cole o link do Spotify e o player completo aparece na pagina de voces.' },
-  { emoji: '📖', title: 'Historia personalizada',    desc: 'Escreva a historia de voces como uma surpresa para seu amor.' },
   { emoji: '🎬', title: 'Animacoes incriveis',       desc: 'Pagina com animacoes cinematicas — tipo um story do TikTok.' },
   { emoji: '📱', title: 'Compartilhar nos Stories',  desc: 'Compartilhe direto nos Stories do Instagram com um toque.' },
 ]
@@ -36,39 +35,135 @@ const COLORS = [
   { name: 'Laranja', value: '#ea580c' },
 ]
 
-/* ── Campo de musica com preview Spotify ───────────── */
+/* ── Busca de música no Spotify ────────────────────── */
 function SpotifyField({ value, onChange }) {
-  const trackId = extractSpotifyId(value)
+  const [query,   setQuery]   = useState('')
+  const [results, setResults] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [open,    setOpen]    = useState(false)
+  const [selected, setSelected] = useState(null)
+  const timerRef = useRef(null)
+  const wrapRef  = useRef(null)
+
+  /* fecha dropdown ao clicar fora */
+  useEffect(() => {
+    function handler(e) { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  /* busca com debounce de 400ms */
+  function handleInput(e) {
+    const v = e.target.value
+    setQuery(v)
+    setOpen(true)
+    clearTimeout(timerRef.current)
+    if (v.trim().length < 2) { setResults([]); return }
+    setLoading(true)
+    timerRef.current = setTimeout(async () => {
+      try {
+        const res  = await fetch(`/api/spotify-search?q=${encodeURIComponent(v)}`)
+        const data = await res.json()
+        setResults(data.tracks || [])
+      } catch { setResults([]) }
+      finally  { setLoading(false) }
+    }, 400)
+  }
+
+  function pick(track) {
+    setSelected(track)
+    setQuery(track.name)
+    setOpen(false)
+    onChange(track.trackUrl)
+  }
+
+  function clear() {
+    setSelected(null)
+    setQuery('')
+    setResults([])
+    onChange('')
+  }
+
   return (
-    <div>
+    <div ref={wrapRef}>
       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-        Musica do Spotify <span className="normal-case font-normal text-gray-400">(opcional)</span>
+        Nossa Música
+        <span className="normal-case font-normal text-gray-400 ml-1"></span>
       </label>
+
+      {/* Input de busca */}
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg">🎵</span>
+        {/* Logo Spotify */}
+        <span className="absolute left-3 top-1/2 -translate-y-1/2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#1DB954">
+            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+          </svg>
+        </span>
+
         <input
           type="text"
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          placeholder="Cole o link da musica no Spotify"
-          className="w-full border-2 border-love-100 rounded-xl pl-9 pr-4 py-3 text-sm focus:border-love-400 focus:outline-none transition font-medium"
+          value={query}
+          onChange={handleInput}
+          onFocus={() => results.length > 0 && setOpen(true)}
+          placeholder="Digite o nome da música ou artista..."
+          className="w-full border-2 border-love-100 rounded-xl pl-10 pr-10 py-3 text-sm focus:border-love-400 focus:outline-none transition font-medium"
         />
+
+        {/* Limpar seleção */}
+        {(query || selected) && (
+          <button type="button" onClick={clear}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition text-lg leading-none">
+            ×
+          </button>
+        )}
+
+        {/* Loading spinner */}
+        {loading && (
+          <div className="absolute right-8 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-love-300 border-t-transparent rounded-full animate-spin" />
+        )}
       </div>
-      <p className="text-gray-400 text-xs mt-1.5">
-        Abra o Spotify → selecione a musica → compartilhar → copiar link
-      </p>
-      {trackId && (
-        <div className="mt-3 rounded-2xl overflow-hidden shadow-md">
-          <iframe
-            src={`https://open.spotify.com/embed/track/${trackId}?utm_source=generator&theme=0`}
-            width="100%" height="80" frameBorder="0"
-            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-            loading="lazy"
-          />
-          <p className="text-center text-green-600 text-xs font-semibold py-2 bg-green-50">
-            ✅ Musica detectada! Ela aparecera na pagina de voces.
-          </p>
+
+      {/* Dropdown de resultados */}
+      {open && results.length > 0 && (
+        <div className="mt-1 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden z-50 relative">
+          {results.map(track => (
+            <button
+              key={track.id}
+              type="button"
+              onClick={() => pick(track)}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-love-50 transition text-left"
+            >
+              {track.albumArt
+                ? <img src={track.albumArt} alt={track.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                : <div className="w-10 h-10 rounded-lg bg-love-100 flex items-center justify-center flex-shrink-0 text-lg">🎵</div>
+              }
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-gray-800 truncate">{track.name}</p>
+                <p className="text-xs text-gray-400 truncate">{track.artist}</p>
+              </div>
+            </button>
+          ))}
         </div>
+      )}
+
+      {/* Música selecionada */}
+      {selected && (
+        <div className="mt-3 flex items-center gap-3 bg-green-50 border border-green-200 rounded-2xl px-4 py-3">
+          {selected.albumArt && (
+            <img src={selected.albumArt} alt={selected.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-gray-800 truncate">{selected.name}</p>
+            <p className="text-xs text-gray-500 truncate">{selected.artist}</p>
+          </div>
+          <span className="text-green-600 font-bold text-xs flex-shrink-0">✅ selecionada</span>
+        </div>
+      )}
+
+      {!selected && !query && (
+        <p className="text-gray-400 text-xs mt-1.5">
+          Busque pelo nome da música ou artista
+        </p>
       )}
     </div>
   )
@@ -81,7 +176,12 @@ export default function Home() {
   const [isPremium, setIsPremium] = useState(false)
   const [form, setForm] = useState({
     coupleNames: '', anniversaryDate: '', themeColor: '#C9184A',
-    story: '', musicUrl: '', photos: [],
+    musicUrl: '', photos: [],
+    loveMessage: '',
+    timelineEvents: [],
+    coverPhoto: null,
+    surpriseMessage: '',
+    surprisePhoto: null,
   })
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -89,7 +189,7 @@ export default function Home() {
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
   const handleChange = e => set(e.target.name, e.target.value)
 
-  const maxPhotos = isPremium ? Infinity : 1
+  const maxPhotos = isPremium ? 10 : 3
 
   const addPhotos = e => {
     const files = Array.from(e.target.files)
@@ -100,13 +200,32 @@ export default function Home() {
   }
   const removePhoto = i => set('photos', form.photos.filter((_, j) => j !== i))
 
-  /* ao mudar para Basico, descarta fotos extras */
+  const addTimelineEvent = () => {
+    if (form.timelineEvents.length >= 5) return
+    set('timelineEvents', [...form.timelineEvents, { date: '', title: '', description: '' }])
+  }
+  const removeTimelineEvent = i => set('timelineEvents', form.timelineEvents.filter((_, j) => j !== i))
+  const updateTimelineEvent = (i, field, value) => {
+    const updated = form.timelineEvents.map((ev, j) => j === i ? { ...ev, [field]: value } : ev)
+    set('timelineEvents', updated)
+  }
+
+  /* ao mudar para Basico, descarta campos premium */
   const selectPlan = (premium) => {
+    /* bloqueia troca se o formulário já foi preenchido */
+    if (form.coupleNames || form.anniversaryDate || form.musicUrl ||
+        form.photos.length > 0 || form.loveMessage || form.timelineEvents.length > 0 ||
+        form.surpriseMessage || form.coverPhoto) return
     setIsPremium(premium)
-    if (!premium && form.photos.length > 1) {
-      set('photos', form.photos.slice(0, 1))
+    if (!premium) {
+      if (form.photos.length > 3) set('photos', form.photos.slice(0, 3))
+
+      set('loveMessage', '')
+      set('timelineEvents', [])
+      set('coverPhoto', null)
+      set('surpriseMessage', '')
+      set('surprisePhoto', null)
     }
-    if (!premium) set('story', '')
   }
 
   const previewDate = form.anniversaryDate
@@ -161,12 +280,68 @@ export default function Home() {
         } catch {}
       }
 
-      /* cria evento de historia (apenas Premium) */
-      if (isPremium && form.story) {
+
+      /* cria carta de amor (apenas Premium) */
+      if (isPremium && form.loveMessage) {
         try {
           await axios.post(`${API_BASE}/api/events`, {
-            coupleId: id, title: 'Nossa Historia',
-            description: form.story, eventDate: form.anniversaryDate, category: 'story',
+            coupleId: id, title: 'Carta de Amor',
+            description: form.loveMessage,
+            eventDate: form.anniversaryDate || new Date().toISOString().split('T')[0],
+            category: 'love_letter',
+          })
+        } catch {}
+      }
+
+      /* cria eventos de timeline (apenas Premium) */
+      if (isPremium && form.timelineEvents.length > 0) {
+        for (const [i, ev] of form.timelineEvents.entries()) {
+          if (!ev.title) continue
+          try {
+            await axios.post(`${API_BASE}/api/events`, {
+              coupleId: id, title: ev.title,
+              description: ev.description || '',
+              eventDate: ev.date || form.anniversaryDate || new Date().toISOString().split('T')[0],
+              category: 'timeline',
+              positionIndex: i,
+            })
+          } catch {}
+        }
+      }
+
+      /* cria foto de capa (apenas Premium) */
+      if (isPremium && form.coverPhoto) {
+        try {
+          const fd = new FormData()
+          fd.append('files', form.coverPhoto)
+          const { data: up } = await axios.post(`${API_BASE}/api/events/${id}/upload-photos`, fd)
+          if (up?.paths?.[0]) {
+            await axios.post(`${API_BASE}/api/events`, {
+              coupleId: id, title: 'Foto de Capa',
+              imageUrl: up.paths[0],
+              eventDate: form.anniversaryDate || new Date().toISOString().split('T')[0],
+              category: 'cover_photo',
+            })
+          }
+        } catch {}
+      }
+
+      /* cria caixa surpresa (apenas Premium) */
+      if (isPremium && form.surpriseMessage) {
+        try {
+          let surpriseImageUrl = null
+          if (form.surprisePhoto) {
+            const fd = new FormData()
+            fd.append('files', form.surprisePhoto)
+            const { data: up } = await axios.post(`${API_BASE}/api/events/${id}/upload-photos`, fd)
+            surpriseImageUrl = up?.paths?.[0] || null
+          }
+          await axios.post(`${API_BASE}/api/events`, {
+            coupleId: id, title: 'Caixa Surpresa',
+            description: form.surpriseMessage,
+            imageUrl: surpriseImageUrl,
+            eventDate: form.anniversaryDate || new Date().toISOString().split('T')[0],
+            category: 'surprise_box',
           })
         } catch {}
       }
@@ -185,6 +360,13 @@ export default function Home() {
   }
 
   const scrollTo = id => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+
+  /* true assim que qualquer campo é preenchido — trava a seleção de plano */
+  const formStarted = !!(
+    form.coupleNames || form.anniversaryDate || form.musicUrl ||
+    form.photos.length > 0 || form.loveMessage || form.timelineEvents.length > 0 ||
+    form.surpriseMessage || form.coverPhoto
+  )
 
   const scrollAndSelectPlan = (premium) => {
     selectPlan(premium)
@@ -315,7 +497,7 @@ export default function Home() {
               </div>
               <p className="text-gray-400 text-xs mb-6">pagamento unico</p>
               <ul className="space-y-3 text-sm text-gray-600 mb-8">
-                {['Pagina animada personalizada','Contador em tempo real','1 foto do casal','Musica do Spotify','QR Code exclusivo','Validade de 30 dias'].map(f => (
+                {['Pagina animada personalizada','Contador em tempo real','Ate 3 fotos do casal','Musica do Spotify','QR Code exclusivo','Validade de 30 dias'].map(f => (
                   <li key={f} className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-love-100 text-love-600 flex items-center justify-center text-xs font-bold flex-shrink-0">✓</span>
                     {f}
@@ -340,7 +522,7 @@ export default function Home() {
               </div>
               <p className="text-white/50 text-xs mb-6">pagamento unico · para sempre</p>
               <ul className="space-y-3 text-sm text-white/80 mb-8">
-                {['Tudo do Basico','Fotos ilimitadas','Historia personalizada','Compartilhar nos Stories','Pagina sem prazo de validade','Suporte prioritario'].map(f => (
+                {['Tudo do Basico','Ate 10 fotos do casal','Carta de amor personalizada','Timeline de momentos especiais','Cor do tema personalizada','Pagina sem prazo de validade'].map(f => (
                   <li key={f} className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-white/20 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">✓</span>
                     {f}
@@ -371,52 +553,77 @@ export default function Home() {
             {/* ── SELECAO DE PLANO ── */}
             <div>
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">1. Escolha seu plano</p>
-              <div className="grid grid-cols-2 gap-3">
 
-                {/* Basico */}
-                <button type="button" onClick={() => selectPlan(false)}
-                  className={`relative text-left p-4 rounded-2xl border-2 transition-all duration-200 ${
-                    !isPremium ? 'border-love-500 bg-love-50 shadow-md' : 'border-gray-200 hover:border-love-200'
-                  }`}>
-                  {!isPremium && (
-                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-love-500 flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">✓</span>
-                    </div>
-                  )}
-                  <p className="font-black text-love-600 text-xl leading-none">R$14<span className="text-base">,90</span></p>
-                  <p className="text-xs font-bold text-gray-500 mt-1">Basico</p>
-                  <p className="text-xs text-gray-400 mt-2 leading-relaxed">1 foto · Musica<br />QR Code · 30 dias</p>
-                </button>
-
-                {/* Premium */}
-                <button type="button" onClick={() => selectPlan(true)}
-                  className={`relative text-left p-4 rounded-2xl border-2 transition-all duration-200 ${
-                    isPremium ? 'border-love-500 shadow-md' : 'border-gray-200 hover:border-love-200'
-                  }`}
+              {formStarted ? (
+                /* Plano travado — formulário já foi preenchido */
+                <div className={`relative p-4 rounded-2xl border-2 ${isPremium ? 'border-love-500' : 'border-love-500 bg-love-50'}`}
                   style={isPremium ? { background: 'linear-gradient(135deg, #4A0020, #C9184A)' } : {}}>
-                  <div className="absolute top-2 right-2 bg-white/20 border border-white/30 text-white rounded-full px-1.5 py-0.5"
-                    style={{ fontSize: '8px', fontWeight: 700, color: isPremium ? 'white' : '#C9184A', background: isPremium ? 'rgba(255,255,255,0.2)' : '#FFF0F4' }}>
-                    POPULAR
-                  </div>
-                  {isPremium && (
-                    <div className="absolute top-2 right-14 w-5 h-5 rounded-full bg-white/30 flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">✓</span>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className={`font-black text-xl leading-none ${isPremium ? 'text-white' : 'text-love-600'}`}>
+                        {isPremium ? 'R$19' : 'R$14'}<span className="text-base">,90</span>
+                      </p>
+                      <p className={`text-xs font-bold mt-1 ${isPremium ? 'text-white/70' : 'text-gray-500'}`}>
+                        {isPremium ? 'Premium' : 'Basico'}
+                      </p>
                     </div>
-                  )}
-                  <p className={`font-black text-xl leading-none ${isPremium ? 'text-white' : 'text-love-600'}`}>
-                    R$19<span className="text-base">,90</span>
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${isPremium ? 'bg-white/20 text-white' : 'bg-love-100 text-love-600'}`}>
+                      <span>✓</span> Plano confirmado
+                    </div>
+                  </div>
+                  <p className={`text-xs mt-2 ${isPremium ? 'text-white/50' : 'text-gray-400'}`}>
+                    Para trocar de plano, recarregue a pagina e comece novamente.
                   </p>
-                  <p className={`text-xs font-bold mt-1 ${isPremium ? 'text-white/70' : 'text-gray-500'}`}>Premium</p>
-                  <p className={`text-xs mt-2 leading-relaxed ${isPremium ? 'text-white/60' : 'text-gray-400'}`}>
-                    Fotos ilimitadas<br />Historia · Para sempre
-                  </p>
-                </button>
-              </div>
+                </div>
+              ) : (
+                /* Plano livre — ainda pode trocar */
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Basico */}
+                  <button type="button" onClick={() => selectPlan(false)}
+                    className={`relative text-left p-4 rounded-2xl border-2 transition-all duration-200 ${
+                      !isPremium ? 'border-love-500 bg-love-50 shadow-md' : 'border-gray-200 hover:border-love-200'
+                    }`}>
+                    {!isPremium && (
+                      <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-love-500 flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">✓</span>
+                      </div>
+                    )}
+                    <p className="font-black text-love-600 text-xl leading-none">R$14<span className="text-base">,90</span></p>
+                    <p className="text-xs font-bold text-gray-500 mt-1">Basico</p>
+                    <p className="text-xs text-gray-400 mt-2 leading-relaxed">Ate 3 fotos · Musica<br />QR Code · 30 dias</p>
+                  </button>
 
-              {/* Badge do plano selecionado */}
-              <p className="text-center text-xs mt-3 font-semibold text-love-500">
-                {isPremium ? '✨ Plano Premium selecionado' : '📦 Plano Basico selecionado'}
-              </p>
+                  {/* Premium */}
+                  <button type="button" onClick={() => selectPlan(true)}
+                    className={`relative text-left p-4 rounded-2xl border-2 transition-all duration-200 ${
+                      isPremium ? 'border-love-500 shadow-md' : 'border-gray-200 hover:border-love-200'
+                    }`}
+                    style={isPremium ? { background: 'linear-gradient(135deg, #4A0020, #C9184A)' } : {}}>
+                    <div className="absolute top-2 right-2 rounded-full px-1.5 py-0.5"
+                      style={{ fontSize: '8px', fontWeight: 700, color: isPremium ? 'white' : '#C9184A', background: isPremium ? 'rgba(255,255,255,0.2)' : '#FFF0F4' }}>
+                      POPULAR
+                    </div>
+                    {isPremium && (
+                      <div className="absolute top-2 right-14 w-5 h-5 rounded-full bg-white/30 flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">✓</span>
+                      </div>
+                    )}
+                    <p className={`font-black text-xl leading-none ${isPremium ? 'text-white' : 'text-love-600'}`}>
+                      R$19<span className="text-base">,90</span>
+                    </p>
+                    <p className={`text-xs font-bold mt-1 ${isPremium ? 'text-white/70' : 'text-gray-500'}`}>Premium</p>
+                    <p className={`text-xs mt-2 leading-relaxed ${isPremium ? 'text-white/60' : 'text-gray-400'}`}>
+                      10 fotos · Carta de amor<br />Timeline · Para sempre
+                    </p>
+                  </button>
+                </div>
+              )}
+
+              {!formStarted && (
+                <p className="text-center text-xs mt-3 font-semibold text-love-500">
+                  {isPremium ? '✨ Plano Premium selecionado' : '📦 Plano Basico selecionado'}
+                </p>
+              )}
             </div>
 
             <hr className="border-gray-100" />
@@ -436,28 +643,131 @@ export default function Home() {
               {previewDate && <p className="text-love-500 text-xs mt-1.5 font-semibold">❤️ Juntos desde {previewDate}</p>}
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Cor do tema</label>
-              <div className="flex gap-2.5 flex-wrap">
-                {COLORS.map(c => (
-                  <button key={c.value} type="button" title={c.name}
-                    onClick={() => set('themeColor', c.value)}
-                    className={`w-10 h-10 rounded-xl transition-all hover:scale-110 ${form.themeColor === c.value ? 'ring-[3px] ring-offset-2 ring-gray-400 scale-110' : ''}`}
-                    style={{ backgroundColor: c.value }} />
-                ))}
-              </div>
-            </div>
-
-            {/* Historia — apenas Premium */}
+            {/* Campos exclusivos Premium */}
             {isPremium && (
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                  Historia de voces <span className="normal-case font-normal text-gray-400">(aparece na pagina como surpresa)</span>
-                </label>
-                <textarea name="story" value={form.story} onChange={handleChange}
-                  placeholder="Como voces se conheceram? Qual foi o primeiro beijo? Escreva para seu amor ler..."
-                  rows={4} className="w-full border-2 border-love-100 rounded-xl px-4 py-3 text-sm focus:border-love-400 focus:outline-none transition resize-none font-medium" />
-              </div>
+              <>
+                {/* Foto de capa */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    Foto de capa <span className="normal-case font-normal text-gray-400">(aparece em tela cheia na abertura com efeito parallax)</span>
+                  </label>
+                  {form.coverPhoto ? (
+                    <div className="relative group">
+                      <img src={URL.createObjectURL(form.coverPhoto)} alt="capa"
+                        className="w-full h-32 object-cover rounded-xl" />
+                      <button type="button" onClick={() => set('coverPhoto', null)}
+                        className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full text-sm font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition">✕</button>
+                    </div>
+                  ) : (
+                    <>
+                      <label htmlFor="cover-photo"
+                        className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-love-200 rounded-xl p-4 cursor-pointer hover:border-love-400 hover:bg-love-50 transition">
+                        <span className="text-2xl">🌅</span>
+                        <span className="text-sm text-gray-500 font-medium">Clique para adicionar a foto de capa</span>
+                      </label>
+                      <input id="cover-photo" type="file" accept="image/*" className="hidden"
+                        onChange={e => { if (e.target.files[0]) set('coverPhoto', e.target.files[0]); e.target.value = '' }} />
+                    </>
+                  )}
+                </div>
+
+                <hr className="border-gray-100" />
+
+                {/* Cor do tema */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    Cor do tema <span className="normal-case font-normal text-gray-400">(personaliza as cores da pagina)</span>
+                  </label>
+                  <div className="flex gap-3 flex-wrap">
+                    {COLORS.map(c => (
+                      <button key={c.value} type="button" title={c.name}
+                        onClick={() => set('themeColor', c.value)}
+                        className="w-9 h-9 rounded-full transition-all duration-200"
+                        style={{
+                          background: c.value,
+                          boxShadow: form.themeColor === c.value ? `0 0 0 3px white, 0 0 0 5px ${c.value}` : 'none',
+                          transform: form.themeColor === c.value ? 'scale(1.15)' : 'scale(1)',
+                        }} />
+                    ))}
+                  </div>
+                </div>
+
+                <hr className="border-gray-100" />
+
+                {/* Carta de amor */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    Carta de amor <span className="normal-case font-normal text-gray-400">(mensagem direta para seu parceiro — aparece na pagina)</span>
+                  </label>
+                  <textarea value={form.loveMessage} onChange={e => set('loveMessage', e.target.value)}
+                    placeholder="Meu amor, quando estou com voce eu sinto que o mundo para... escreva o que o seu coracao mandar ❤️"
+                    rows={5} className="w-full border-2 border-love-100 rounded-xl px-4 py-3 text-sm focus:border-love-400 focus:outline-none transition resize-none font-medium" />
+                </div>
+
+                {/* Timeline de momentos */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+                    Momentos especiais <span className="normal-case font-normal text-gray-400">(ate 5 — aparecem como timeline na pagina)</span>
+                  </label>
+                  <div className="space-y-3">
+                    {form.timelineEvents.map((ev, i) => (
+                      <div key={i} className="border-2 border-love-100 rounded-xl p-4 space-y-2 relative">
+                        <button type="button" onClick={() => removeTimelineEvent(i)}
+                          className="absolute top-2 right-2 w-6 h-6 bg-red-100 text-red-500 rounded-full text-xs font-bold flex items-center justify-center hover:bg-red-200 transition">✕</button>
+                        <input type="date" value={ev.date} onChange={e => updateTimelineEvent(i, 'date', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-love-400 focus:outline-none" />
+                        <input type="text" placeholder="Ex: Primeiro beijo, Nossa primeira viagem..." value={ev.title}
+                          onChange={e => updateTimelineEvent(i, 'title', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-love-400 focus:outline-none" />
+                        <textarea placeholder="Descricao (opcional)..." value={ev.description} rows={2}
+                          onChange={e => updateTimelineEvent(i, 'description', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-love-400 focus:outline-none resize-none" />
+                      </div>
+                    ))}
+                  </div>
+                  {form.timelineEvents.length < 5 && (
+                    <button type="button" onClick={addTimelineEvent}
+                      className="mt-3 w-full py-2.5 rounded-xl border-2 border-dashed border-love-200 text-love-500 text-sm font-semibold hover:bg-love-50 transition">
+                      + Adicionar momento especial
+                    </button>
+                  )}
+                </div>
+
+                <hr className="border-gray-100" />
+
+                {/* Caixa surpresa */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    Caixa surpresa 🎁 <span className="normal-case font-normal text-gray-400">(seu parceiro clica para abrir e ver a mensagem secreta)</span>
+                  </label>
+                  <textarea value={form.surpriseMessage} onChange={e => set('surpriseMessage', e.target.value)}
+                    placeholder="Ex: Voce e a pessoa mais incrivel que ja conheci. Cada dia com voce e um presente... 💝"
+                    rows={4} className="w-full border-2 border-love-100 rounded-xl px-4 py-3 text-sm focus:border-love-400 focus:outline-none transition resize-none font-medium" />
+                  {form.surpriseMessage && (
+                    <div className="mt-2">
+                      <p className="text-xs text-gray-400 mb-1.5">Foto dentro da caixa (opcional)</p>
+                      {form.surprisePhoto ? (
+                        <div className="relative group">
+                          <img src={URL.createObjectURL(form.surprisePhoto)} alt="surpresa"
+                            className="w-full h-24 object-cover rounded-xl" />
+                          <button type="button" onClick={() => set('surprisePhoto', null)}
+                            className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition">✕</button>
+                        </div>
+                      ) : (
+                        <>
+                          <label htmlFor="surprise-photo"
+                            className="flex items-center gap-2 border border-dashed border-love-200 rounded-xl px-4 py-2.5 cursor-pointer hover:bg-love-50 transition">
+                            <span>📷</span>
+                            <span className="text-sm text-gray-400">Adicionar foto (opcional)</span>
+                          </label>
+                          <input id="surprise-photo" type="file" accept="image/*" className="hidden"
+                            onChange={e => { if (e.target.files[0]) set('surprisePhoto', e.target.files[0]); e.target.value = '' }} />
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
             )}
 
             {/* Campo Spotify */}
@@ -467,13 +777,13 @@ export default function Home() {
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                 {isPremium
-                  ? <>Fotos de voces <span className="normal-case font-normal text-gray-400">(ilimitadas)</span></>
-                  : <>Foto do casal <span className="normal-case font-normal text-gray-400">(1 foto — plano Basico)</span></>
+                  ? <>Fotos de voces <span className="normal-case font-normal text-gray-400">(ate 10 fotos — plano Premium)</span></>
+                  : <>Fotos do casal <span className="normal-case font-normal text-gray-400">(ate 3 fotos — plano Basico)</span></>
                 }
               </label>
 
-              {/* Botao de upload — esconde se basico ja tem 1 foto */}
-              {(isPremium || form.photos.length < 1) && (
+              {/* Botao de upload — esconde se atingiu limite do plano */}
+              {form.photos.length < maxPhotos && (
                 <>
                   <label htmlFor="fotos"
                     className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-love-200 rounded-xl p-5 cursor-pointer hover:border-love-400 hover:bg-love-50 transition">

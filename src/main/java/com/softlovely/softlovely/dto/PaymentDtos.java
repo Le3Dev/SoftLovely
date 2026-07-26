@@ -7,6 +7,9 @@ public class PaymentDtos {
     public static class CheckoutRequest {
         public String coupleId;
         public boolean isPremium;
+        public String customerEmail;
+        public String customerName;
+        public String customerCpf;
     }
 
     public static class CheckoutResponse {
