@@ -21,7 +21,6 @@ import { MoonSky } from '../../components/story/MoonSky'
 import { ScrollCounter } from '../../components/story/ScrollCounter'
 import { HeartbeatSync } from '../../components/story/HeartbeatSync'
 import { MusicChapter } from '../../components/story/MusicChapter'
-import { ScrollKaraoke } from '../../components/story/ScrollKaraoke'
 import { HeartReveal } from '../../components/story/HeartReveal'
 import { PhotoClothesline } from '../../components/story/PhotoClothesline'
 import { ThreadTimeline } from '../../components/story/ThreadTimeline'
@@ -179,244 +178,6 @@ function HeartPhoto({ src, alt = '', size = 220 }) {
         zIndex: -1,
       }} />
     </div>
-  )
-}
-
-/* níveis do casal (o poema usa o título do nível atual) */
-const COUPLE_LEVELS = [
-  { days: 0,    title: 'Paquerando',        icon: Sparkles },
-  { days: 7,    title: 'Apaixonados',       icon: Heart },
-  { days: 30,   title: 'Comprometidos',     icon: Flame },
-  { days: 100,  title: 'Cúmplices',         icon: Star },
-  { days: 180,  title: 'Parceiros de Vida', icon: Flower2 },
-  { days: 365,  title: 'Um Só Coração',     icon: InfinityIcon },
-  { days: 730,  title: 'Almas Gêmeas',      icon: Gem },
-  { days: 1825, title: 'Eternos',           icon: Crown },
-  { days: 3650, title: 'Lendários',         icon: Rocket },
-]
-
-/* SECAO Premium — Caixa surpresa */
-function SectionSurpriseBox({ event }) {
-  const [ref, visible] = useInView(0.3)
-  const [opened, setOpened] = useState(false)
-  const [showContent, setShowContent] = useState(false)
-  const [confetti, setConfetti] = useState([])
-
-  if (!event?.description) return null
-
-  const resolveUrl = url => {
-    if (!url) return null
-    if (url.startsWith('http')) return url
-    return `${API_BASE}${url}`
-  }
-
-  const photoUrl = event.imageUrl ? resolveUrl(event.imageUrl) : null
-
-  function open() {
-    const pieces = Array.from({ length: 32 }, (_, i) => ({
-      id: i,
-      color: ['#C9184A','#FF6B8A','#FFD700','#FF69B4','#ffffff','#FF4466','#FFAA00','#FF8C00'][i % 8],
-      shape: i % 3,
-      x: (Math.random() - 0.5) * 320,
-      y: -(60 + Math.random() * 220),
-      rot: Math.random() * 720 - 360,
-      size: 7 + Math.random() * 9,
-      delay: (Math.random() * 0.3).toFixed(2),
-    }))
-    setConfetti(pieces)
-    setOpened(true)
-    setTimeout(() => setShowContent(true), 750)
-  }
-
-  const words = event.description.split(' ')
-
-  return (
-    <div ref={ref} data-chapter="surpresa" className="story-section overflow-hidden"
-      style={{ position: 'relative' }}>
-
-      {!opened && <FloatingIcons icons={[GiftIcon, Sparkles, Mail, GiftIcon, Heart]} />}
-
-      {!opened && (
-        <div className="section-content relative z-10 flex flex-col items-center gap-5 w-full max-w-xs mx-auto px-5">
-            <p className={`text-white/40 text-xs font-bold uppercase tracking-widest transition-all duration-500 ${visible ? 'opacity-100' : 'opacity-0'}`}>
-              Tem uma surpresa para você
-            </p>
-
-            <button onClick={open}
-              className={`flex flex-col items-center gap-4 transition-all duration-700 active:scale-95 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
-              style={{ transitionDelay: '0.2s', background: 'none', border: 'none', cursor: 'pointer' }}>
-
-              <div className="sfx-drop" style={{ position: 'relative', animation: visible ? 'giftShake 3s ease-in-out infinite 2s' : 'none' }}>
-                {/* Aura pulsante */}
-                <div style={{
-                  position: 'absolute', inset: -28, borderRadius: '50%', pointerEvents: 'none',
-                  background: 'radial-gradient(circle, rgba(var(--tc-rgb,201,24,74),0.28) 0%, transparent 70%)',
-                  animation: 'softPulse 1.8s ease-in-out infinite',
-                }} />
-
-                <svg width="140" height="140" viewBox="0 0 140 140" fill="none">
-                  {/* Tampa */}
-                  <rect x="15" y="10" width="110" height="30" rx="6"
-                    style={{ fill: 'rgba(var(--tc-rgb,201,24,74),0.15)', stroke: 'rgba(var(--tc-rgb,201,24,74),0.8)', strokeWidth: 2 }} />
-                  {/* Fita da tampa */}
-                  <rect x="62" y="10" width="16" height="30"
-                    style={{ fill: 'rgba(var(--tc-rgb,201,24,74),0.3)' }} />
-                  {/* Laço */}
-                  <path d="M70 10 C60 2, 50 2, 55 10 S70 10 70 10 Z"
-                    style={{ fill: 'rgba(var(--tc-rgb,201,24,74),0.7)' }} />
-                  <path d="M70 10 C80 2, 90 2, 85 10 S70 10 70 10 Z"
-                    style={{ fill: 'rgba(var(--tc-rgb,201,24,74),0.7)' }} />
-                  {/* Corpo */}
-                  <rect x="15" y="42" width="110" height="88" rx="6"
-                    style={{ fill: 'rgba(var(--tc-rgb,201,24,74),0.1)', stroke: 'rgba(var(--tc-rgb,201,24,74),0.8)', strokeWidth: 2 }} />
-                  {/* Fita vertical */}
-                  <rect x="62" y="42" width="16" height="88"
-                    style={{ fill: 'rgba(var(--tc-rgb,201,24,74),0.25)' }} />
-                  {/* Fita horizontal */}
-                  <rect x="15" y="82" width="110" height="16"
-                    style={{ fill: 'rgba(var(--tc-rgb,201,24,74),0.25)' }} />
-                </svg>
-                {/* Coração central */}
-                <div style={{ position: 'absolute', top: '70%', left: '50%', transform: 'translate(-50%,-50%)' }}>
-                  <Heart size={26} color="var(--tc, #C9184A)" fill="var(--tc, #C9184A)" />
-                </div>
-              </div>
-
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ fontFamily: 'Dancing Script, cursive', fontSize: '1.45rem', color: 'white', fontWeight: 700, textShadow: '0 0 24px rgba(var(--tc-rgb,201,24,74),0.8)', lineHeight: 1.2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                  Toque para abrir <Sparkles size={18} />
-                </p>
-                <p className="text-white/30 text-xs mt-1">preparado especialmente para você</p>
-              </div>
-            </button>
-        </div>
-      )}
-
-      {opened && (
-        <div style={{ position: 'absolute', inset: 0 }}>
-
-            {/* Confetti explodindo do centro da caixa */}
-          {/* Confetti */}
-          <div style={{ position: 'absolute', top: '35%', left: '50%', width: 0, height: 0, pointerEvents: 'none', zIndex: 30 }}>
-            {confetti.map(p => (
-              <div key={p.id} style={{
-                position: 'absolute',
-                width: p.size, height: p.size,
-                background: p.color,
-                borderRadius: p.shape === 0 ? '50%' : p.shape === 1 ? '2px' : '0 50% 50% 50%',
-                animation: `confettiExplode 1.3s cubic-bezier(0.25,0.46,0.45,0.94) ${p.delay}s both`,
-                '--cx': `${p.x}px`,
-                '--cy': `${p.y}px`,
-                '--cr': `${p.rot}deg`,
-              }} />
-            ))}
-          </div>
-
-          {/* Sparkles */}
-          <div style={{ position: 'absolute', top: '22%', left: 0, right: 0, display: 'flex', justifyContent: 'space-around', padding: '0 16px', pointerEvents: 'none', zIndex: 30 }}>
-              {[Sparkles, Star, Sparkle, Star, Sparkles, Sparkle, Star].map((SIcon, i) => (
-                <span key={i} style={{
-                  position: 'absolute',
-                  left: `${5 + i * 14}%`, top: `${10 + (i % 3) * 20}%`,
-                  animation: `sparkleOut 0.9s ease both ${(i * 0.08).toFixed(2)}s`,
-                  opacity: 0,
-                }}><SIcon size={16} color="#FFD700" fill="#FFD700" /></span>
-              ))}
-            </div>
-
-          {/* Foto do casal como fundo */}
-          {photoUrl ? (
-            <img src={photoUrl} alt="surpresa"
-              style={{
-                position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
-                animation: 'fadeIn 0.9s ease both 0.2s', opacity: 0, animationFillMode: 'both',
-              }}
-              onError={e => { e.currentTarget.style.display = 'none' }}
-            />
-          ) : (
-            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at center, #4A0020 0%, #0D0208 70%)' }} />
-          )}
-
-          {/* Overlay gradiente */}
-          <div style={{
-            position: 'absolute', inset: 0, pointerEvents: 'none',
-            background: photoUrl
-              ? 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 45%, rgba(0,0,0,0.25) 100%)'
-              : 'rgba(0,0,0,0.2)',
-          }} />
-
-          {/* Mensagem sobre a foto */}
-          {showContent && (
-            <div style={{
-              position: 'absolute', inset: 0, zIndex: 10,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              padding: '0 28px',
-              animation: 'burstUp 0.8s cubic-bezier(0.34,1.56,0.64,1) both',
-            }}>
-              <div style={{
-                background: 'rgba(0,0,0,0.38)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
-                borderRadius: 28, padding: '28px 24px 24px',
-                border: '1px solid rgba(255,255,255,0.14)',
-                maxWidth: 320, width: '100%',
-                boxShadow: '0 8px 40px rgba(0,0,0,0.5)',
-              }}>
-                <div style={{ fontSize: 34, fontFamily: 'Georgia', color: 'var(--tc,#C9184A)', opacity: 0.6, lineHeight: 0.8, marginBottom: 8 }}>"</div>
-                <p style={{ fontFamily: 'Dancing Script, cursive', fontSize: '1.25rem', lineHeight: 1.65, color: 'rgba(255,255,255,0.95)', textAlign: 'center', textShadow: '0 1px 8px rgba(0,0,0,0.6)' }}>
-                  {words.map((w, i) => (
-                    <span key={i} style={{ display: 'inline-block', animation: `fadeInUp 0.35s ease both ${(i * 0.035).toFixed(2)}s` }}>
-                      {w}&nbsp;
-                    </span>
-                  ))}
-                </p>
-                <div style={{ fontSize: 34, fontFamily: 'Georgia', color: 'var(--tc,#C9184A)', opacity: 0.6, lineHeight: 0.8, textAlign: 'right', marginTop: 8 }}>"</div>
-              </div>
-              <div style={{ marginTop: 24, animation: 'heartbeat 2s ease-in-out infinite 1.2s' }}>
-                <Heart size={32} color="#FF4D7A" fill="#FF4D7A" />
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-    </div>
-  )
-}
-
-/* ── seleciona um dos versos de forma estável (mesmo casal = mesmo poema) ── */
-function pickStable(seed, count) {
-  let h = 0
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
-  return h % count
-}
-
-/* SECAO Premium — Poema personalizado do casal */
-function SectionCouplePoem({ couple, coupleName, time, trackName }) {
-  if (!time) return null
-
-  const days = time.totalDays
-  let levelIndex = 0
-  for (let i = 0; i < COUPLE_LEVELS.length; i++) if (days >= COUPLE_LEVELS[i].days) levelIndex = i
-  const levelTitle = COUPLE_LEVELS[levelIndex].title
-  const daysFmt = days.toLocaleString('pt-BR')
-  const name = coupleName || 'vocês'
-
-  const templates = [
-    `Há ${daysFmt} dias o destino escreveu\numa história que só ${name} vivem.\nEntre risos, silêncios e promessas,\nvocês se tornaram ${levelTitle} —\ne cada instante, por menor que seja,\né prova de que esse amor\nnão cabe em palavras, só em tempo.`,
-    `${name},\nse o tempo fosse contado em batidas de coração,\njá seriam ${daysFmt} motivos\npara continuar escolhendo um ao outro.\nVocês não apenas se amam — vocês constroem,\ndia após dia, um lugar chamado "nós".`,
-    trackName
-      ? `Enquanto "${trackName}" tocava ao fundo,\n${name} escreviam, sem perceber,\no primeiro capítulo de ${daysFmt} dias\nque ainda vão se tornar mil.\nIsso não é sorte. Isso é escolha.\nTodos os dias, de novo.`
-      : `Diz a lenda que existem almas que se encontram\nantes mesmo de se conhecerem.\n${name} são a prova.\n${daysFmt} dias, incontáveis promessas,\ne um amor que já é ${levelTitle} —\ne ainda está só começando.`,
-  ]
-  const poem  = templates[pickStable(couple?.id || name, templates.length)]
-  const lines = poem.split('\n')
-
-  /* versos acendem um a um conforme a leitura (karaokê de scroll) */
-  return (
-    <ScrollKaraoke chapter="poema" eyebrow="poema do casal" lines={lines}
-      style={{ background: 'linear-gradient(160deg, #0D0208 0%, #2d0019 50%, #4A0020 100%)' }}
-      lineClassName="text-white/90 text-xl md:text-2xl leading-snug italic [font-family:Georgia,serif]"
-      header={<PenLine size={22} color="rgba(255,215,0,0.55)" />}
-      footer={<p className="font-script text-2xl text-love-200">— para {name} ♡</p>} />
   )
 }
 
@@ -957,9 +718,8 @@ export default function CouplePage() {
   const loveLetter      = events.find(e => e.category === 'love_letter')
   const timelineEvents  = events.filter(e => e.category === 'timeline').sort((a, b) => (a.positionIndex ?? 0) - (b.positionIndex ?? 0))
   const coverPhotoEvent = events.find(e => e.category === 'cover_photo')
-  const surpriseEvent   = events.find(e => e.category === 'surprise_box')
 
-  /* fotos da galeria (a da caixa surpresa fica guardada para a surpresa) */
+  /* fotos da galeria (fora a de capa e fotos antigas da caixa surpresa, que saiu) */
   const coverPhoto    = coverPhotoEvent ? resolveUrl(coverPhotoEvent.imageUrl) : null
   const galleryPhotos = events
     .filter(e => e.imageUrl && e.category !== 'surprise_box' && e.category !== 'cover_photo')
@@ -1057,19 +817,13 @@ export default function CouplePage() {
       {/* 10. Próximo capítulo — o anel do ano de vocês */}
       <NextChapter start={startDate} />
 
-      {/* 11. Poema do casal — versos em karaokê */}
-      {time && <SectionCouplePoem couple={couple} coupleName={coupleName} time={time} />}
-
-      {/* 12. Carta de amor (Premium) — sai do envelope */}
+      {/* 11. Carta de amor (Premium) — sai do envelope */}
       {loveLetter && <EnvelopeLetter letter={loveLetter} />}
 
-      {/* 13. Caixa surpresa (Premium) */}
-      {surpriseEvent && <SectionSurpriseBox event={surpriseEvent} />}
-
-      {/* 14. O fio dá um laço: a história continua */}
+      {/* 12. O fio dá um laço: a história continua */}
       <StoryFinale totalDays={time?.totalDays} />
 
-      {/* 15. Compartilhar */}
+      {/* 13. Compartilhar */}
       <SectionShare
         couple={couple}
         partners={shownPartners}

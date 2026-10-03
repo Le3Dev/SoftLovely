@@ -126,7 +126,7 @@ export function Starfield({ className = '' }) {
 /* ── publica --enter / --leave em cada seção enquanto a janela rola ──
    --enter: 1 com a seção uma tela abaixo → 0 quando o topo chega ao topo
    --leave: 0 enquanto o fim da seção está na tela → 1 quando ela saiu por cima
-   Os efeitos em si ficam no globals.css (classes sfx-* e story-*).       */
+   Os efeitos em si ficam no globals.css (classes story-*).               */
 export function useStoryScrollFx(ready) {
   useEffect(() => {
     if (!ready) return
