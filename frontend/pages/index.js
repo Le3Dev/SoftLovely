@@ -263,8 +263,6 @@ export default function Home() {
     loveMessage: '',
     timelineEvents: [],
     coverPhoto: null,
-    surpriseMessage: '',
-    surprisePhoto: null,
   })
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -298,7 +296,7 @@ export default function Home() {
     /* bloqueia troca se o formulário já foi preenchido */
     if (form.coupleNames || form.anniversaryDate || form.musicUrl ||
         form.photos.length > 0 || form.loveMessage || form.timelineEvents.length > 0 ||
-        form.surpriseMessage || form.coverPhoto) return
+        form.coverPhoto) return
     setIsPremium(premium)
     if (!premium) {
       if (form.photos.length > 3) set('photos', form.photos.slice(0, 3))
@@ -306,8 +304,6 @@ export default function Home() {
       set('loveMessage', '')
       set('timelineEvents', [])
       set('coverPhoto', null)
-      set('surpriseMessage', '')
-      set('surprisePhoto', null)
     }
   }
 
@@ -409,26 +405,6 @@ export default function Home() {
         } catch {}
       }
 
-      /* cria caixa surpresa (apenas Premium) */
-      if (isPremium && form.surpriseMessage) {
-        try {
-          let surpriseImageUrl = null
-          if (form.surprisePhoto) {
-            const fd = new FormData()
-            fd.append('files', form.surprisePhoto)
-            const { data: up } = await axios.post(`${API_BASE}/api/events/${id}/upload-photos`, fd)
-            surpriseImageUrl = up?.paths?.[0] || null
-          }
-          await axios.post(`${API_BASE}/api/events`, {
-            coupleId: id, title: 'Caixa Surpresa',
-            description: form.surpriseMessage,
-            imageUrl: surpriseImageUrl,
-            eventDate: form.anniversaryDate || new Date().toISOString().split('T')[0],
-            category: 'surprise_box',
-          })
-        } catch {}
-      }
-
       setMessage('✅ Dados salvos! Redirecionando...')
       setTimeout(() => router.push(`/payment?coupleId=${id}&isPremium=${isPremium}`), 1400)
     } catch (err) {
@@ -448,7 +424,7 @@ export default function Home() {
   const formStarted = !!(
     form.coupleNames || form.anniversaryDate || form.musicUrl ||
     form.photos.length > 0 || form.loveMessage || form.timelineEvents.length > 0 ||
-    form.surpriseMessage || form.coverPhoto
+    form.coverPhoto
   )
 
   const scrollAndSelectPlan = (premium) => {
@@ -760,41 +736,6 @@ export default function Home() {
                       className="mt-3 w-full py-2.5 rounded-xl border-2 border-dashed border-love-200 text-love-500 text-sm font-semibold hover:bg-love-50 transition">
                       + Adicionar momento especial
                     </button>
-                  )}
-                </div>
-
-                <hr className="border-gray-100" />
-
-                {/* Caixa surpresa */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-                    Caixa surpresa 🎁 <span className="normal-case font-normal text-gray-400">(seu parceiro clica para abrir e ver a mensagem secreta)</span>
-                  </label>
-                  <textarea value={form.surpriseMessage} onChange={e => set('surpriseMessage', e.target.value)}
-                    placeholder="Ex: Voce e a pessoa mais incrivel que ja conheci. Cada dia com voce e um presente... 💝"
-                    rows={4} className="w-full border-2 border-love-100 rounded-xl px-4 py-3 text-sm focus:border-love-400 focus:outline-none transition resize-none font-medium" />
-                  {form.surpriseMessage && (
-                    <div className="mt-2">
-                      <p className="text-xs text-gray-400 mb-1.5">Foto dentro da caixa (opcional)</p>
-                      {form.surprisePhoto ? (
-                        <div className="relative group">
-                          <img src={URL.createObjectURL(form.surprisePhoto)} alt="surpresa"
-                            className="w-full h-24 object-cover rounded-xl" />
-                          <button type="button" onClick={() => set('surprisePhoto', null)}
-                            className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition">✕</button>
-                        </div>
-                      ) : (
-                        <>
-                          <label htmlFor="surprise-photo"
-                            className="flex items-center gap-2 border border-dashed border-love-200 rounded-xl px-4 py-2.5 cursor-pointer hover:bg-love-50 transition">
-                            <span>📷</span>
-                            <span className="text-sm text-gray-400">Adicionar foto (opcional)</span>
-                          </label>
-                          <input id="surprise-photo" type="file" accept="image/*" className="hidden"
-                            onChange={e => { if (e.target.files[0]) set('surprisePhoto', e.target.files[0]); e.target.value = '' }} />
-                        </>
-                      )}
-                    </div>
                   )}
                 </div>
               </>

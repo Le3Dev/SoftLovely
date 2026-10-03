@@ -20,9 +20,7 @@ export const PALETTES = {
   'momentos':            ['#1C0A14', '#3D1028'],
   'nosso universo':      ['#060A24', '#241452'],
   'próximo capítulo':    ['#FFB45E', '#EE5670'],
-  'poema':               ['#1D0B12', '#4A1430'],
   'carta de amor':       ['#FFE7EF', '#FFBCCD'],
-  'surpresa':            ['#2A0616', '#5E1233'],
   'continua...':         ['#0D0208', '#2D0019'],
   'compartilhar':        ['#1A0010', '#7B0033'],
 }
