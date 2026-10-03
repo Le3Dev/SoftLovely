@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import axios from 'axios'
+import { motion, MotionConfig, useTransform } from 'framer-motion'
+import {
+  ScrollNav, LoveMarquee, RevealHeading, DealIn, ParallaxWord,
+  ScrollQuote, RedThreadSteps, PlansMeet, FooterSignature, useSafeReducedMotion, useScrollProgress,
+} from '../components/LandingScrollFx'
+import { RESPECT_REDUCED_MOTION } from '../lib/scrollMotion'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
 
@@ -166,6 +172,83 @@ function SpotifyField({ value, onChange }) {
         </p>
       )}
     </div>
+  )
+}
+
+/* ── Hero com parallax: texto sobe e some, celular "levanta" ──
+   a entrada inicial é CSS (não espera o JS hidratar para aparecer) */
+const heroItem = i => ({ animationDelay: `${0.1 + i * 0.12}s` })
+
+function LandingHero({ onCta }) {
+  const ref = useRef(null)
+  const reduce = useSafeReducedMotion()
+  const scrollYProgress = useScrollProgress({ target: ref, offset: ['start start', 'end start'] })
+  const textY       = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : -140])
+  const textOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0])
+  const textScale   = useTransform(scrollYProgress, [0, 1], [1, reduce ? 1 : 0.9])
+  const phoneRotate = useTransform(scrollYProgress, [0, 0.55], [reduce ? 0 : 24, 0])
+  const phoneScale  = useTransform(scrollYProgress, [0, 0.55], [reduce ? 1 : 0.92, reduce ? 1 : 1.06])
+  const phoneY      = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : -90])
+  const glowScale   = useTransform(scrollYProgress, [0, 1], [1, 1.8])
+
+  return (
+    <section ref={ref} className="relative overflow-hidden pt-28 pb-28 px-4"
+      style={{ background: 'linear-gradient(150deg, #4A0020 0%, #7B0033 35%, #C9184A 70%, #FF4D7A 100%)' }}>
+      <motion.div className="absolute inset-0 pointer-events-none"
+        style={{ scale: glowScale, background: 'radial-gradient(ellipse 60% 50% at 50% 60%, rgba(255,77,122,0.18) 0%, transparent 70%)' }} />
+
+      <motion.div className="relative z-10 max-w-3xl mx-auto text-center"
+        style={{ y: textY, opacity: textOpacity, scale: textScale }}>
+        <div className="animate-fadeInUp inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 text-white/80 text-sm font-medium mb-8"
+          style={heroItem(0)}>
+          <span className="animate-heartbeat">❤️</span>
+          A pagina mais especial do seu relacionamento
+        </div>
+        <h1 className="animate-fadeInUp text-5xl md:text-7xl font-black text-white leading-[1.1] mb-6 tracking-tight" style={heroItem(1)}>
+          Surpreenda quem<br />
+          <span style={{ color: '#FFB3C1' }}>voce ama</span>
+        </h1>
+        <p className="animate-fadeInUp text-white/70 text-lg md:text-xl max-w-xl mx-auto mb-10 leading-relaxed" style={heroItem(2)}>
+          Crie uma pagina animada e privada com contador, fotos, musica do Spotify e sua historia — para compartilhar nos Stories.
+        </p>
+        <div className="animate-fadeInUp" style={heroItem(3)}>
+          <button onClick={onCta}
+            className="inline-block bg-white text-love-600 font-black text-lg px-10 py-4 rounded-2xl shadow-2xl hover:shadow-love-400/40 transition-all hover:-translate-y-1">
+            Criar nossa pagina ✨
+          </button>
+          <p className="text-white/40 text-sm mt-4">Menos de 2 minutos · Pagamento seguro</p>
+        </div>
+      </motion.div>
+
+      {/* Mockup — começa inclinado para trás e "levanta" com o scroll */}
+      <motion.div className="relative z-10 max-w-xs mx-auto mt-16"
+        style={{ rotateX: phoneRotate, scale: phoneScale, y: phoneY, transformPerspective: 1000 }}>
+        <div className="animate-fadeInScale" style={heroItem(4)}>
+        <div className="animate-float">
+          <div className="rounded-3xl overflow-hidden shadow-2xl border border-white/20"
+            style={{ background: 'linear-gradient(160deg, #7B0033, #C9184A)' }}>
+            <div className="p-6 text-center text-white">
+              <div className="flex justify-center items-center gap-3 mb-4">
+                <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-2xl border-2 border-white/30">👩</div>
+                <span className="text-3xl animate-heartbeat">❤️</span>
+                <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-2xl border-2 border-white/30">👨</div>
+              </div>
+              <p className="font-black text-xl mb-1">Ana & Pedro</p>
+              <p className="text-white/60 text-xs mb-4">juntos desde 14 de fev. de 2022</p>
+              <div className="grid grid-cols-3 gap-2">
+                {[['3','Anos'],['47','Dias'],['12','Horas']].map(([n,l]) => (
+                  <div key={l} className="bg-white/15 rounded-xl py-2">
+                    <div className="font-black text-2xl">{n}</div>
+                    <div className="text-white/60 text-xs">{l}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+      </motion.div>
+    </section>
   )
 }
 
@@ -374,122 +457,59 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-white font-sans overflow-x-hidden">
+    <MotionConfig reducedMotion={RESPECT_REDUCED_MOTION ? 'user' : 'never'}>
+    <div className="min-h-screen bg-white font-sans overflow-x-clip">
 
-      {/* NAVBAR */}
-      <nav className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur border-b border-love-100 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-love-600 text-xl animate-heartbeat">❤️</span>
-            <span className="font-black text-love-700 text-xl tracking-tight">SoftLovely</span>
-          </div>
-          <button onClick={() => scrollTo('criar')} className="btn-love text-sm py-2.5 px-5">
-            Criar minha pagina
-          </button>
-        </div>
-      </nav>
+      {/* NAVBAR — coração do logo enche conforme o scroll */}
+      <ScrollNav onCta={() => scrollTo('criar')} />
 
       {/* HERO */}
-      <section className="relative overflow-hidden pt-28 pb-28 px-4"
-        style={{ background: 'linear-gradient(150deg, #4A0020 0%, #7B0033 35%, #C9184A 70%, #FF4D7A 100%)' }}>
-        <div className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 60%, rgba(255,77,122,0.18) 0%, transparent 70%)' }} />
+      <LandingHero onCta={() => scrollTo('criar')} />
 
-        <div className="relative z-10 max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 text-white/80 text-sm font-medium mb-8">
-            <span className="animate-heartbeat">❤️</span>
-            A pagina mais especial do seu relacionamento
-          </div>
-          <h1 className="text-5xl md:text-7xl font-black text-white leading-[1.1] mb-6 tracking-tight">
-            Surpreenda quem<br />
-            <span style={{ color: '#FFB3C1' }}>voce ama</span>
-          </h1>
-          <p className="text-white/70 text-lg md:text-xl max-w-xl mx-auto mb-10 leading-relaxed">
-            Crie uma pagina animada e privada com contador, fotos, musica do Spotify e sua historia — para compartilhar nos Stories.
-          </p>
-          <button onClick={() => scrollTo('criar')}
-            className="inline-block bg-white text-love-600 font-black text-lg px-10 py-4 rounded-2xl shadow-2xl hover:shadow-love-400/40 transition-all hover:-translate-y-1">
-            Criar nossa pagina ✨
-          </button>
-          <p className="text-white/40 text-sm mt-4">Menos de 2 minutos · Pagamento seguro</p>
-        </div>
-
-        {/* Mockup */}
-        <div className="relative z-10 max-w-xs mx-auto mt-16 animate-float">
-          <div className="rounded-3xl overflow-hidden shadow-2xl border border-white/20"
-            style={{ background: 'linear-gradient(160deg, #7B0033, #C9184A)' }}>
-            <div className="p-6 text-center text-white">
-              <div className="flex justify-center items-center gap-3 mb-4">
-                <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-2xl border-2 border-white/30">👩</div>
-                <span className="text-3xl animate-heartbeat">❤️</span>
-                <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-2xl border-2 border-white/30">👨</div>
-              </div>
-              <p className="font-black text-xl mb-1">Ana & Pedro</p>
-              <p className="text-white/60 text-xs mb-4">juntos desde 14 de fev. de 2022</p>
-              <div className="grid grid-cols-3 gap-2">
-                {[['3','Anos'],['47','Dias'],['12','Horas']].map(([n,l]) => (
-                  <div key={l} className="bg-white/15 rounded-xl py-2">
-                    <div className="font-black text-2xl">{n}</div>
-                    <div className="text-white/60 text-xs">{l}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Fitas cruzadas entre o hero e as funcionalidades */}
+      <LoveMarquee />
 
       {/* FEATURES */}
-      <section className="py-24 px-4 bg-love-50">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-love-500 font-bold text-sm uppercase tracking-widest mb-3">Funcionalidades</p>
-            <h2 className="text-4xl font-black text-love-900">Tudo que o amor merece</h2>
-          </div>
+      <section className="relative overflow-hidden py-24 px-4 bg-love-50">
+        <ParallaxWord className="text-[11rem] md:text-[20rem] text-love-200/50">amor</ParallaxWord>
+        <div className="relative z-10 max-w-5xl mx-auto">
+          <RevealHeading eyebrow="Funcionalidades" title="Tudo que o amor merece" />
           <div className="grid md:grid-cols-3 gap-5">
-            {FEATURES.map(({ emoji, title, desc }) => (
-              <div key={title} className="bg-white rounded-2xl p-6 border border-love-100 shadow-sm hover:shadow-md hover:border-love-300 transition-all hover:-translate-y-1">
-                <div className="w-12 h-12 rounded-xl bg-love-100 flex items-center justify-center text-2xl mb-4">{emoji}</div>
-                <h3 className="font-bold text-love-900 text-base mb-2">{title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
-              </div>
+            {FEATURES.map(({ emoji, title, desc }, i) => (
+              <DealIn key={title} index={i}>
+                <div className="h-full bg-white rounded-2xl p-6 border border-love-100 shadow-sm hover:shadow-md hover:border-love-300 transition-all hover:-translate-y-1">
+                  <motion.div className="w-12 h-12 rounded-xl bg-love-100 flex items-center justify-center text-2xl mb-4"
+                    initial={{ scale: 0, rotate: -35 }} whileInView={{ scale: 1, rotate: 0 }} viewport={{ once: true }}
+                    transition={{ type: 'spring', stiffness: 260, damping: 12, delay: 0.3 + (i % 3) * 0.1 }}>
+                    {emoji}
+                  </motion.div>
+                  <h3 className="font-bold text-love-900 text-base mb-2">{title}</h3>
+                  <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+                </div>
+              </DealIn>
             ))}
           </div>
         </div>
       </section>
 
-      {/* COMO FUNCIONA */}
+      {/* FRASE — acende palavra por palavra enquanto rola */}
+      <ScrollQuote />
+
+      {/* COMO FUNCIONA — "fio vermelho do destino" liga os passos */}
       <section className="py-24 px-4 bg-white">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-love-500 font-bold text-sm uppercase tracking-widest mb-3">Como funciona</p>
-            <h2 className="text-4xl font-black text-love-900">3 passos simples</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-10">
-            {STEPS.map(({ num, title, desc }, i) => (
-              <div key={num} className="text-center animate-fadeInUp" style={{ animationDelay: `${i * 0.15}s` }}>
-                <div className="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center font-black text-2xl text-white"
-                  style={{ background: 'linear-gradient(135deg, #C9184A, #FF4D7A)' }}>
-                  {num}
-                </div>
-                <h3 className="font-bold text-love-900 text-lg mb-2">{title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
+          <RevealHeading eyebrow="Como funciona" title="3 passos simples" />
+          <RedThreadSteps steps={STEPS} />
         </div>
       </section>
 
-      {/* PLANOS */}
+      {/* PLANOS — os cards se encontram no meio */}
       <section className="py-24 px-4 bg-love-50">
         <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-love-500 font-bold text-sm uppercase tracking-widest mb-3">Planos</p>
-            <h2 className="text-4xl font-black text-love-900">Escolha o de voces</h2>
-          </div>
-          <div className="grid md:grid-cols-2 gap-6">
-
-            <div className="bg-white rounded-3xl p-8 border-2 border-love-100 shadow-sm">
+          <RevealHeading eyebrow="Planos" title="Escolha o de voces" />
+          <PlansMeet
+            left={
+            <div className="h-full bg-white rounded-3xl p-8 border-2 border-love-100 shadow-sm">
               <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Basico</p>
               <div className="flex items-end gap-1 mb-1">
                 <span className="text-love-600 font-black text-4xl">R$14</span>
@@ -509,8 +529,9 @@ export default function Home() {
                 Comecar agora
               </button>
             </div>
-
-            <div className="relative rounded-3xl p-8 border-2 border-love-500 shadow-xl overflow-hidden"
+            }
+            right={
+            <div className="relative h-full rounded-3xl p-8 border-2 border-love-500 shadow-xl overflow-hidden"
               style={{ background: 'linear-gradient(150deg, #4A0020 0%, #C9184A 100%)' }}>
               <div className="absolute top-4 right-4 bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full border border-white/30">
                 Mais popular ❤️
@@ -534,7 +555,8 @@ export default function Home() {
                 Quero o Premium ✨
               </button>
             </div>
-          </div>
+            }
+          />
         </div>
       </section>
 
@@ -543,12 +565,20 @@ export default function Home() {
         style={{ background: 'linear-gradient(160deg, #4A0020 0%, #C9184A 60%, #FF4D7A 100%)' }}>
         <div className="max-w-xl mx-auto">
           <div className="text-center mb-10">
-            <div className="text-5xl animate-heartbeat inline-block mb-4">❤️</div>
-            <h2 className="text-4xl font-black text-white mb-2">Crie a pagina de voces</h2>
-            <p className="text-white/60">Preencha e surpreenda quem voce ama</p>
+            <motion.div className="inline-block mb-4"
+              initial={{ scale: 0, rotate: -25 }} whileInView={{ scale: 1, rotate: 0 }} viewport={{ once: true }}
+              transition={{ type: 'spring', stiffness: 220, damping: 10 }}>
+              <span className="text-5xl animate-heartbeat inline-block">❤️</span>
+            </motion.div>
+            <RevealHeading dark className="" title="Crie a pagina de voces" subtitle="Preencha e surpreenda quem voce ama" />
           </div>
 
-          <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-8 shadow-2xl space-y-5">
+          <motion.form onSubmit={handleSubmit} className="bg-white rounded-3xl p-8 shadow-2xl space-y-5"
+            initial={{ opacity: 0, y: 80, rotateX: 14 }}
+            whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
+            viewport={{ once: true, amount: 0.1 }}
+            transition={{ type: 'spring', stiffness: 70, damping: 16 }}
+            style={{ transformPerspective: 1200 }}>
 
             {/* ── SELECAO DE PLANO ── */}
             <div>
@@ -828,16 +858,17 @@ export default function Home() {
               {loading ? '❤️ Criando...' : `Criar nossa pagina ${isPremium ? 'Premium' : 'Basica'} ❤️`}
             </button>
             <p className="text-center text-gray-400 text-xs">Pagamento seguro via Stripe 🔒</p>
-          </form>
+          </motion.form>
         </div>
       </section>
 
       {/* FOOTER */}
       <footer className="py-10 px-4 text-center bg-love-900">
         <span className="text-white/30 text-xl animate-heartbeat inline-block">❤️</span>
-        <p className="font-black text-white text-xl mt-2 tracking-tight">SoftLovely</p>
+        <FooterSignature />
         <p className="text-white/30 text-xs mt-1">Feito com amor para casais apaixonados · 2026</p>
       </footer>
     </div>
+    </MotionConfig>
   )
 }

@@ -81,6 +81,13 @@ body {
   50%       { box-shadow: 0 0 50px rgba(201, 24, 74, 0.65); }
 }
 
+/* Onda do "líquido" que enche o coração do logo */
+@keyframes liquidWave {
+  from { transform: translateX(0); }
+  to   { transform: translateX(12px); }
+}
+.liquid-wave { animation: liquidWave 1.6s linear infinite; }
+
 /* ══════════════════════════════════════════════════
    KEYFRAMES — PÁGINA DO CASAL (cinemáticas)
 ══════════════════════════════════════════════════ */
@@ -126,6 +133,14 @@ body {
 @keyframes kenBurns {
   from { transform: scale(1)    translate(0, 0); }
   to   { transform: scale(1.12) translate(-2%, -1%); }
+}
+@keyframes kenBurns2 {
+  from { transform: scale(1)    translate(0, 0); }
+  to   { transform: scale(1.14) translate(2.5%, -1.5%); }
+}
+@keyframes kenBurns3 {
+  from { transform: scale(1.05) translate(-1.5%, 1%); }
+  to   { transform: scale(1.16) translate(1%, -1%); }
 }
 
 /* Partícula que sobe e some */
@@ -278,25 +293,27 @@ body {
   box-shadow: 0 8px 30px rgba(var(--tc-rgb, 201,24,74), 0.5);
 }
 
-/* ── Scroll-snap para a página do casal ───────────── */
-.snap-container {
-  height: 100dvh;
-  overflow-y: scroll;
-  scroll-snap-type: y mandatory;
-  scroll-behavior: smooth;
-  overscroll-behavior: none;
+/* ── Página do casal: uma história contínua ──────── */
+.story-page {
+  min-height: 100vh;
+  background: #0D0208;
+  overflow-x: clip;
 }
 
-.snap-section {
-  height: 100dvh;
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
+/* seção de tela cheia */
+.story-section {
+  height: 100svh;
   position: relative;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+
+/* capítulo alto com conteúdo "preso" na tela (StickyChapter) */
+.story-chapter {
+  position: relative;
 }
 
 /* ── Onda de áudio ────────────────────────────────── */
@@ -504,11 +521,7 @@ body {
    RESPONSIVIDADE — desktop e tablets
 ══════════════════════════════════════════════════ */
 
-/* Wrapper neutro — sem mockup, apenas passthrough */
-.snap-wrapper {
-  width: 100%;
-  height: 100%;
-}
+
 
 /* ── Slot machine ────────────────────────────────── */
 @keyframes reelSlide {
@@ -564,6 +577,16 @@ body {
   60%  { transform: translateY(-55px) rotate(-22deg); opacity: 1; }
   100% { transform: translateY(-110px) rotate(-40deg); opacity: 0; }
 }
+@keyframes tapHeartRise {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.3) rotate(0deg); }
+  15%  { opacity: 1; transform: translate(-50%,-50%) scale(1.2) rotate(calc(var(--rot,0deg) * 0.3)); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--drift,0px)), calc(-50% - 100px)) scale(0.75) rotate(var(--rot,0deg)); }
+}
+@keyframes toneArmDrop {
+  0%   { opacity: 0; transform: rotate(-22deg) translateY(-10px); }
+  70%  { opacity: 1; transform: rotate(4deg) translateY(0); }
+  100% { opacity: 1; transform: rotate(0deg) translateY(0); }
+}
 @keyframes confettiExplode {
   0%   { transform: translate(-50%,-50%) rotate(0deg) scale(1); opacity: 1; }
   100% { transform: translate(calc(-50% + var(--cx,0px)), calc(-50% + var(--cy,-80px))) rotate(var(--cr,360deg)) scale(0.5); opacity: 0; }
@@ -613,7 +636,7 @@ body {
   .section-content-lg {
     max-width: 720px !important;
   }
-  .snap-section {
+  .story-section {
     padding-left: 5%;
     padding-right: 5%;
   }
@@ -626,4 +649,81 @@ body {
   .section-content-lg {
     max-width: 860px !important;
   }
+}
+
+/* ══════════════════════════════════════════════════
+   HISTÓRIA — PÁGINA DO CASAL
+   --enter / --leave são publicados por useStoryScrollFx
+   (components/story/StoryKit.js). Usa translate/scale/rotate
+   individuais para compor com os transforms já existentes.
+══════════════════════════════════════════════════ */
+
+/* Profundidade: ao sair, o conteúdo fica para trás, encolhe e some;
+   ao entrar, chega com um leve atraso */
+.story-page .story-section > .section-content,
+.story-page .story-section > .section-content-lg,
+.story-page .story-section > .sfx-layer {
+  translate: 0 calc(var(--leave, 0) * 24vh + var(--enter, 0) * 16vh);
+  scale: calc(1 - var(--leave, 0) * 0.12);
+  opacity: calc(1 - var(--leave, 0) * 1.15 - var(--enter, 0) * 0.75);
+}
+
+/* Caixa surpresa — cai do alto girando */
+.story-page .sfx-drop {
+  translate: 0 calc(var(--enter, 0) * -45vh);
+  rotate: calc(var(--enter, 0) * -25deg);
+}
+
+/* Estrelas piscando e fotos balançando no varal */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.15; }
+  50%      { opacity: 0.9; }
+}
+
+/* Estrela cadente (dispara uma vez, no céu daquela noite) */
+@keyframes shootingStar {
+  0%   { transform: translate(0, 0) rotate(-24deg) scaleX(0.2); opacity: 0; }
+  10%  { opacity: 1; }
+  100% { transform: translate(-70vw, 34vh) rotate(-24deg) scaleX(1); opacity: 0; }
+}
+.shooting-star {
+  position: absolute;
+  top: 12%;
+  right: -10%;
+  width: 140px;
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #ffffff, rgba(255,255,255,0));
+  transform-origin: left center;
+  animation: shootingStar 1.3s ease-out forwards;
+  pointer-events: none;
+}
+
+/* disquinho do mini player girando */
+.animate-spin-slow { animation: spin 6s linear infinite; }
+
+/* Lenis (rolagem suave) */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-stopped { overflow: clip; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.animate-twinkle { animation: twinkle 3s ease-in-out infinite; }
+
+@keyframes clothesSwing {
+  0%, 100% { transform: rotate(-1.4deg); }
+  50%      { transform: rotate(1.4deg); }
+}
+.clothes-swing { transform-origin: 50% 0; animation: clothesSwing 3.6s ease-in-out infinite; }
+
+/* só vale com RESPECT_REDUCED_MOTION ligado (lib/scrollMotion.js), que põe .respect-rm na página */
+@media (prefers-reduced-motion: reduce) {
+  .respect-rm .story-section > .section-content,
+  .respect-rm .story-section > .section-content-lg,
+  .respect-rm .story-section > .sfx-layer,
+  .respect-rm [class*="sfx-"] {
+    translate: none;
+    scale: none;
+    rotate: none;
+    filter: none;
+  }
+  .respect-rm .animate-twinkle, .respect-rm .clothes-swing, .respect-rm .shooting-star { animation: none; }
 }
