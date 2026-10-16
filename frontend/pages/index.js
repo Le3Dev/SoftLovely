@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
+import dynamic from 'next/dynamic'
 import axios from 'axios'
-import { motion, MotionConfig, useTransform } from 'framer-motion'
+import { motion, MotionConfig, useTransform, useInView } from 'framer-motion'
 import {
   ScrollNav, LoveMarquee, RevealHeading, DealIn, ParallaxWord,
-  ScrollQuote, RedThreadSteps, PlansMeet, FooterSignature, useSafeReducedMotion, useScrollProgress,
+  RedThreadSteps, PlansMeet, FooterSignature, useSafeReducedMotion, useScrollProgress,
 } from '../components/LandingScrollFx'
 import { RESPECT_REDUCED_MOTION } from '../lib/scrollMotion'
+import NamesInStars from '../components/landing/NamesInStars'
+
+const HeroHearts3D = dynamic(() => import('../components/landing/HeroHearts3D'), { ssr: false, loading: () => null })
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
 
@@ -190,10 +194,20 @@ function LandingHero({ onCta }) {
   const phoneScale  = useTransform(scrollYProgress, [0, 0.55], [reduce ? 1 : 0.92, reduce ? 1 : 1.06])
   const phoneY      = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : -90])
   const glowScale   = useTransform(scrollYProgress, [0, 1], [1, 1.8])
+  const onScreen    = useInView(ref)
+  const burstRef    = useRef(null)
+
+  /* toque em qualquer lugar do hero (menos botões) solta corações 3D */
+  const burst = e => {
+    if (e.target.closest('button, a, input')) return
+    const r = ref.current.getBoundingClientRect()
+    burstRef.current?.(((e.clientX - r.left) / r.width) * 2 - 1, -(((e.clientY - r.top) / r.height) * 2 - 1))
+  }
 
   return (
-    <section ref={ref} className="relative overflow-hidden pt-28 pb-28 px-4"
+    <section ref={ref} onPointerDown={burst} className="relative overflow-hidden pt-28 pb-28 px-4"
       style={{ background: 'linear-gradient(150deg, #4A0020 0%, #7B0033 35%, #C9184A 70%, #FF4D7A 100%)' }}>
+      <HeroHearts3D progress={scrollYProgress} burstRef={burstRef} running={onScreen} />
       <motion.div className="absolute inset-0 pointer-events-none"
         style={{ scale: glowScale, background: 'radial-gradient(ellipse 60% 50% at 50% 60%, rgba(255,77,122,0.18) 0%, transparent 70%)' }} />
 
@@ -217,6 +231,7 @@ function LandingHero({ onCta }) {
             Criar nossa pagina ✨
           </button>
           <p className="text-white/40 text-sm mt-4">Menos de 2 minutos · Pagamento seguro</p>
+          <p className="text-white/50 text-xs mt-6 select-none">💗 toque em qualquer lugar para espalhar amor</p>
         </div>
       </motion.div>
 
@@ -257,6 +272,7 @@ export default function Home() {
   const router = useRouter()
 
   const [isPremium, setIsPremium] = useState(false)
+  const [starNames, setStarNames] = useState('')
   const [form, setForm] = useState({
     coupleNames: '', anniversaryDate: '', themeColor: '#C9184A',
     musicUrl: '', photos: [],
@@ -429,7 +445,14 @@ export default function Home() {
 
   const scrollAndSelectPlan = (premium) => {
     selectPlan(premium)
+    /* nomes digitados na seção das estrelas já chegam preenchidos */
+    if (starNames && !form.coupleNames) set('coupleNames', starNames)
     scrollTo('criar')
+  }
+
+  const handleStarNames = names => {
+    setStarNames(names)
+    scrollTo('planos')
   }
 
   return (
@@ -468,9 +491,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FRASE — acende palavra por palavra enquanto rola */}
-      <ScrollQuote />
-
       {/* COMO FUNCIONA — "fio vermelho do destino" liga os passos */}
       <section className="py-24 px-4 bg-white">
         <div className="max-w-4xl mx-auto">
@@ -479,8 +499,11 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ESTRELAS — o visitante escreve os nomes do casal no céu (3D) */}
+      <NamesInStars onUseNames={handleStarNames} />
+
       {/* PLANOS — os cards se encontram no meio */}
-      <section className="py-24 px-4 bg-love-50">
+      <section id="planos" className="py-24 px-4 bg-love-50">
         <div className="max-w-3xl mx-auto">
           <RevealHeading eyebrow="Planos" title="Escolha o de voces" />
           <PlansMeet

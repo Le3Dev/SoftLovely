@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   motion, useScroll, useTransform, useSpring, useVelocity, useMotionValue,
-  useAnimationFrame, useMotionValueEvent, useInView,
+  useAnimationFrame, useMotionValueEvent,
 } from 'framer-motion'
 import { HEART_PATH, useScrollProgress, useSafeReducedMotion } from '../lib/scrollMotion'
 
@@ -210,89 +210,6 @@ export function ParallaxWord({ children, className = '' }) {
         {children}
       </motion.span>
     </div>
-  )
-}
-
-/* ── Frase fixa na tela que "acende" palavra por palavra ── */
-const QUOTE = 'Cada segundo ao lado de quem a gente ama merece ser contado, lembrado e celebrado.'
-const QUOTE_ACCENTS = ['contado', 'lembrado', 'celebrado']
-const ECG_PATH = 'M0 30 H180 l8 -16 l10 36 l10 -44 l10 34 l6 -10 H330 l8 -16 l10 36 l10 -44 l10 34 l6 -10 H600'
-
-function QuoteWord({ children, progress, range, accent }) {
-  const opacity = useTransform(progress, range, [0.14, 1])
-  const y = useTransform(progress, range, [10, 0])
-  return (
-    <>
-      <motion.span style={{ opacity, y }}
-        className={`inline-block ${accent ? 'font-script font-bold text-love-300 text-[1.15em]' : 'text-white'}`}>
-        {children}
-      </motion.span>{' '}
-    </>
-  )
-}
-
-function LoveTimer({ start }) {
-  const [secs, setSecs] = useState(0)
-  useEffect(() => {
-    if (!start) return
-    const tick = () => setSecs(Math.floor((Date.now() - start) / 1000))
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [start])
-  const mm = String(Math.floor(secs / 60)).padStart(2, '0')
-  const ss = String(secs % 60).padStart(2, '0')
-  return <span className="tabular-nums font-black text-white">{mm}:{ss}</span>
-}
-
-export function ScrollQuote() {
-  const ref = useRef(null)
-  const inView = useInView(ref, { amount: 0.05 })
-  const [startedAt, setStartedAt] = useState(null)
-  useEffect(() => { if (inView && !startedAt) setStartedAt(Date.now()) }, [inView, startedAt])
-
-  const scrollYProgress = useScrollProgress({ target: ref, offset: ['start start', 'end end'] })
-  const pulse = useTransform(scrollYProgress, [0.05, 0.85], [0, 1])
-  const glowScale = useTransform(scrollYProgress, [0, 1], [0.6, 1.4])
-  const footOpacity = useTransform(scrollYProgress, [0.78, 0.92], [0, 1])
-  const footY = useTransform(scrollYProgress, [0.78, 0.92], [16, 0])
-
-  const words = QUOTE.split(' ')
-  const span = 0.72 / words.length
-
-  return (
-    <section ref={ref} className="relative h-[260vh] bg-love-900">
-      <div className="sticky top-0 h-[100svh] overflow-hidden flex flex-col items-center justify-center px-6">
-        <motion.div aria-hidden="true" className="absolute w-[80vmin] h-[80vmin] rounded-full pointer-events-none"
-          style={{ scale: glowScale, background: 'radial-gradient(circle, rgba(255,77,122,0.28), transparent 65%)' }} />
-
-        <p className="relative max-w-4xl text-center font-black text-3xl sm:text-4xl md:text-6xl leading-[1.15] tracking-tight">
-          {words.map((w, i) => {
-            const start = 0.05 + i * span
-            return (
-              <QuoteWord key={i} progress={scrollYProgress} range={[start, start + span]}
-                accent={QUOTE_ACCENTS.includes(w.replace(/[^\p{L}]/gu, ''))}>
-                {w}
-              </QuoteWord>
-            )
-          })}
-        </p>
-
-        {/* Batimento que desenha junto com a leitura */}
-        <svg viewBox="0 0 600 60" className="relative w-full max-w-2xl h-12 mt-10" fill="none" aria-hidden="true">
-          <path d={ECG_PATH} stroke="rgba(255,204,213,0.12)" strokeWidth="2" strokeLinejoin="round" />
-          <motion.path d={ECG_PATH} stroke="#FF4D7A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-            style={{ pathLength: pulse, filter: 'drop-shadow(0 0 6px rgba(255,77,122,0.8))' }} />
-        </svg>
-
-        <motion.div style={{ opacity: footOpacity, y: footY }} className="relative mt-6 text-center">
-          <p className="text-love-200/80 text-sm md:text-base">
-            ⏱️ Enquanto você lia, mais <LoveTimer start={startedAt} /> de amor se passaram.
-          </p>
-          <p className="text-white/40 text-xs md:text-sm mt-1">Imagine isso contando numa página só de vocês.</p>
-        </motion.div>
-      </div>
-    </section>
   )
 }
 
