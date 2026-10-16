@@ -2,6 +2,7 @@ import axios from 'axios'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
+import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
 import {
   Heart, Sparkles, Flower2, Star, Music, Music2, Music3, Music4,
@@ -30,6 +31,10 @@ import { EnvelopeLetter } from '../../components/story/EnvelopeLetter'
 import { StoryFinale } from '../../components/story/StoryFinale'
 import { LoveGate } from '../../components/story/LoveGate'
 import { useStoryMusic, MusicPill } from '../../components/story/StoryMusic'
+import { MemoryGalaxy } from '../../components/story/MemoryGalaxy'
+import { StarNamesChapter } from '../../components/story/StarNamesChapter'
+
+const HeartsExplosion3D = dynamic(() => import('../../components/story/HeartsExplosion3D'), { ssr: false, loading: () => null })
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
 
@@ -694,6 +699,16 @@ export default function CouplePage() {
   const [gateDone, setGateDone] = useState(false)
   const music = useStoryMusic(couple?.musicUrl)
 
+  /* o "sim" vira uma explosão de corações 3D por cima de tudo */
+  const [celebrate, setCelebrate] = useState(false)
+  /* já baixa a cena 3D enquanto a pessoa lê a pergunta, para explodir sem atraso */
+  useEffect(() => { if (ready) import('../../components/story/HeartsExplosion3D') }, [ready])
+  const acceptLove = () => {
+    music.play()
+    setCelebrate(true)
+    setTimeout(() => setCelebrate(false), 4200)
+  }
+
   const pageUrl = typeof window !== 'undefined' ? `${window.location.origin}/c/${hash}` : ''
 
   /* nomes sempre com inicial maiúscula ("pedro" → "Pedro") */
@@ -783,7 +798,8 @@ export default function CouplePage() {
       <StoryThread rootRef={pageRef} />
 
       {/* entrada: "você me ama?" — o primeiro toque também solta a música */}
-      {!gateDone && <LoveGate onOpen={music.play} onAccept={music.play} onDone={() => setGateDone(true)} />}
+      {!gateDone && <LoveGate onOpen={music.play} onAccept={acceptLove} onDone={() => setGateDone(true)} />}
+      {celebrate && <HeartsExplosion3D themeColor={themeColor} />}
       {gateDone && <MusicPill music={music} />}
 
       {/* 1. Era uma vez — as duas metades da foto se encontram puxadas pelo fio */}
@@ -805,6 +821,9 @@ export default function CouplePage() {
       {/* 6. Nós dois — a foto abre por uma janela de coração */}
       <HeartReveal photos={revealPhotos} coupleName={coupleName} dateStr={dateStr} />
 
+      {/* 6b. Nossa galáxia — as fotos em espiral 3D em volta de um coração */}
+      <MemoryGalaxy photos={galleryPhotos} themeColor={themeColor} />
+
       {/* 7. Varal de memórias */}
       <PhotoClothesline photos={galleryPhotos} dateStr={dateStr} />
 
@@ -819,6 +838,9 @@ export default function CouplePage() {
 
       {/* 11. Carta de amor (Premium) — sai do envelope */}
       {loveLetter && <EnvelopeLetter letter={loveLetter} />}
+
+      {/* 11b. Escritos nas estrelas — os nomes de vocês em 3D, prontos para os Stories */}
+      <StarNamesChapter names={names} />
 
       {/* 12. O fio dá um laço: a história continua */}
       <StoryFinale totalDays={time?.totalDays} />
